@@ -22,7 +22,7 @@ learning segmentation model
 optimization
 1. compile
 2. callback
-3. softmax??
+3. softmax?? - softmax: muti-Classification / sigmoid: binary-Classification
 
 test model
 1. test dataset (carla)

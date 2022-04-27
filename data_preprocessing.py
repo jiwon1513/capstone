@@ -4,7 +4,6 @@ import imageio
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from skimage.transform import resize
 
 file_path = 'D:/download/dataB/'
 image_path = file_path + 'CameraRGB/'
@@ -54,13 +53,10 @@ for n in tqdm(range(len(image_list))):
     img = imageio.imread(image_list[n])
 
     mask = imageio.imread(mask_list[n])
-    mask_road = np.zeros((600, 800, 1), dtype=np.int8)
+    mask_road = np.zeros((height, width, 1), dtype=np.int8)
     mask_road[np.where(mask == 7)[0], np.where(mask == 7)[1]] = 1
-
-    images[n] = resize(img, (height, width, 3))
-    masks[n] = resize(mask_road, (height, width, 1))
-    # images[n] = img
-    # masks[n] = mask_road
+    images[n] = img
+    masks[n] = mask_road
 
 np.random.seed(123)
 shuffle_ids = np.array([i for i in range(len(masks))])

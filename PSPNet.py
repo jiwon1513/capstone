@@ -2,6 +2,7 @@ import numpy as np
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 import tensorflow.keras.backend as K
+from ResNet import get_resnet50_encoder
 
 
 def pool_block(feats, pool_factor):
@@ -45,14 +46,16 @@ def _pspnet(n_classes, encoder,  input_height=384, input_width=576, channels=3):
         pooled = pool_block(o, p)
         pool_outs.append(pooled)
 
-    o = Concatenate(axis=MERGE_AXIS)(pool_outs)
+    o = Concatenate(axis=-1)(pool_outs)
 
     o = Conv2D(512, (1, 1), use_bias=False, name="seg_feats" )(o)
     o = BatchNormalization()(o)
     o = Activation('relu')(o)
 
     o = Conv2D(n_classes, (3, 3), padding='same')(o)
-    o = resize_image(o, (8, 8))
+    # o = K.resize_images(0, 8, 8,
+    #                     data_format="channels_last",
+    #                     interpolation='bilinear')
 
     o = (Activation('sigmoid'))(o)
     model = Model(img_input, o)
@@ -60,7 +63,7 @@ def _pspnet(n_classes, encoder,  input_height=384, input_width=576, channels=3):
     return model
 
 
-def resnet50_pspnet(n_classes,  input_height=384, input_width=576, channels=3):
+def resnet50_pspnet(n_classes,  input_height=600, input_width=800, channels=3):
 
     model = _pspnet(n_classes, get_resnet50_encoder,
                     input_height=input_height, input_width=input_width, channels=channels)
@@ -68,7 +71,7 @@ def resnet50_pspnet(n_classes,  input_height=384, input_width=576, channels=3):
     return model
 
 
-def pspnet(n_classes,  input_height=384, input_width=576, channels=3):
+def pspnet(n_classes,  input_height=600, input_width=800, channels=3):
 
     model = _pspnet(n_classes, vanilla_encoder,
                     input_height=input_height, input_width=input_width, channels=channels)

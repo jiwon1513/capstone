@@ -8,12 +8,15 @@ Created on Thu Apr 21 13:52:05 2022
 
 import cv2
 import numpy as np
+import time
 
-
+#외곽선 찾기
 def findvertex(img):
+    
+    
 
     hsvLower = np.array([0, 0, 213]) # 추출할 색의 하한 
-    hsvUpper = np.array([131, 255, 255]) # 추출할 색의 상한 
+    hsvUpper = np.array([130, 255, 255]) # 추출할 색의 상한 
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # 이미지를 HSV으로 변환 
     hsv_mask = cv2.inRange(hsv, hsvLower, hsvUpper)
 
@@ -31,6 +34,17 @@ def findvertex(img):
     #cv2.imshow('line',image)
     return contours
 
+
+#외곽선들 중에서 가장 큰 영역 찾기
+
+def majorcontour(contours):
+    m = 0;
+    for i in range(0,len(contours)):
+        if(m < contours[i].size):   
+            m = i;
+    return contours[m];  
+
+#찾은 외곽선으로 roi 그리기
 def region_of_interest(img, vertices, color3=(255, 255, 255), color1=255):  # ROI 셋팅
 
     mask = np.zeros_like(img) # mask = img와 같은 크기의 빈 이미지
@@ -49,18 +63,23 @@ def region_of_interest(img, vertices, color3=(255, 255, 255), color1=255):  # RO
     return ROI_image
 
 
-# 찾을려고하는 위에 점 2개 위치를 정하는 선 
+# 찾을려고하는 위쪽 점 2개 위치를 정하는 선 
 # offset 값을 이용해서 찾는 점의 위치를 바꿀수있음
 
-def topline(img, top, w, offset):
-    cv2.line(img, (0,top[1] + offset),(w,top[1] + offset), (255,0,0),2)
+def topline(img, contour, w, offset):
+    top = tuple(contour[contour[:,:,1].argmin()][0])
+    
+    #cv2.circle(img,top,5,(0,0,255),-1)   
+    #cv2.line(img, (0,top[1] + offset),(w,top[1] + offset), (255,0,0),2)
     return top[1]+offset
 
 # 찾을려고하는 아래에 점 2개 위치를 정하는 선 
 # offset 값을 이용해서 찾는 점의 위치를 바꿀수있음
 
-def bottomline(img, bottom, w, offset):
-    cv2.line(img, (0,bottom[1] + offset),(w,bottom[1] + offset), (255,0,0),2)
+def bottomline(img, contour, w, offset):
+    bottom = tuple(contour[contour[:,:,1].argmax()][0])
+    #cv2.circle(img,bottom,5,(0,0,255),-1)
+    #cv2.line(img, (0,bottom[1] + offset),(w,bottom[1] + offset), (255,0,0),2)
     return bottom[1] + offset
 
 def minmax(c, contour):
@@ -92,6 +111,8 @@ def minmax(c, contour):
 
 #상한, 하한선을 정한 상태에서 점 4개를 찾아줌
 
+   
+
 def finddot(img,contour,yt, yb,e):
     '''a = np.where( (contour[:,:,1] <(yt + e)) & (contour[:,:,1] > (yt - e)) )
     b = np.where( (contour[:,:,1] <(yb + e)) & (contour[:,:,1] > (yb - e)) )'''
@@ -115,12 +136,19 @@ def finddot(img,contour,yt, yb,e):
     cv2.circle(img,contour[b[0][bmx]][0],5,(0,255,255),-1)
     cv2.circle(img,contour[b[0][bmy]][0],5,(0,255,255),-1)
     
-    return 0
+    t1 = contour[a[0][amx]][0]
+    t2 = contour[a[0][amy]][0]
+    
+    b1 = contour[b[0][bmx]][0]
+    b2 = contour[b[0][bmy]][0]
+    
+    return t1,t2,b1,b2
 
 
-
+"""
+start = time.time()
 path = 'C:/jiwon/please/segmentation/outputs/result_1'
-img_name = 'umm_road_000007.png'
+img_name = 'um_road_000003.png'
 full_path = path + '/' +img_name
  
 img_array = np.fromfile(full_path, np.uint8)
@@ -131,42 +159,33 @@ h, w, c = img.shape
 cv2.imshow('first', img)
 
 
-contours = findvertex(img)
-
-m = 0;
-for i in range(0,len(contours)):
-    if(m < contours[i].size):
-        m = i;
-
-                
-contour = contours[m]
+contours = findvertex(img)                
+contour = majorcontour(contours)
 
 # roi 그리기
 roi = region_of_interest(img,[contour], (0, 0, 255))
 
-#cv2.imshow('roi', roi)
+cv2.imshow('roi', roi)
 
 
 #최상점, 최하점
 #contour[:,:,1]는 contour에서 y값만을 모은 배열
 
-topmost = tuple(contour[contour[:,:,1].argmin()][0])
-bottommost = tuple(contour[contour[:,:,1].argmax()][0])
+
 
 
 '''cv2.circle(img,leftmost,5,(0,0,255),-1)
 cv2.circle(img,rightmost,5,(0,0,255),-1) '''
 
 # 최상점, 최하점 빨간 점으로 표시
-cv2.circle(img,topmost,5,(0,0,255),-1)
-cv2.circle(img,bottommost,5,(0,0,255),-1)
+
 
 
 #cv2.imshow("dot",img)
 
 #상한, 하한 선 그리기
-t1 = topline(roi, topmost, w,20)
-b1 = bottomline(roi,bottommost,w,-20)  
+t1 = topline(roi, contour, w,20)
+b1 = bottomline(roi,contour,w,-20)  
     
     
 
@@ -175,14 +194,12 @@ finddot(roi,contour,t1,b1,2)
 
    
 cv2.imshow("finddot",roi)
-
+print("time :", time.time() - start)
 
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 
-
-
-
+"""
 

@@ -205,7 +205,7 @@ while True:
     ## 선 분포도 조사 histogram
     leftbase, rightbase = plothistogram(thresh)
     # plt.plot(hist)d
-    # plt.show()
+    # plt.show()d
 
     ## histogram 기반 window roi 영역
     draw_info = slide_window_search(thresh, leftbase, rightbase)

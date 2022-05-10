@@ -1,0 +1,90 @@
+<html>
+<head>
+<title>analyze.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #6897bb;}
+.s3 { color: #808080;}
+.s4 { color: #6a8759;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+analyze.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">cv2</span>
+<span class="s0">import </span><span class="s1">youtube_dl</span>
+<span class="s0">import </span><span class="s1">pafy</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">import </span><span class="s1">matplotlib.pyplot </span><span class="s0">as </span><span class="s1">plt</span>
+<span class="s0">import </span><span class="s1">time</span>
+
+<span class="s0">def </span><span class="s1">wrapping(image):</span>
+    <span class="s1">(h</span><span class="s0">, </span><span class="s1">w) = (image.shape[</span><span class="s2">0</span><span class="s1">]</span><span class="s0">, </span><span class="s1">image.shape[</span><span class="s2">1</span><span class="s1">])</span>
+
+    <span class="s1">source = np.float32([[w // </span><span class="s2">2 </span><span class="s1">- </span><span class="s2">30</span><span class="s0">, </span><span class="s1">h * </span><span class="s2">0.53</span><span class="s1">]</span><span class="s0">, </span><span class="s1">[w // </span><span class="s2">2 </span><span class="s1">+ </span><span class="s2">60</span><span class="s0">, </span><span class="s1">h * </span><span class="s2">0.53</span><span class="s1">]</span><span class="s0">, </span><span class="s1">[w * </span><span class="s2">0.3</span><span class="s0">, </span><span class="s1">h]</span><span class="s0">, </span><span class="s1">[w</span><span class="s0">, </span><span class="s1">h]])</span>
+    <span class="s1">destination = np.float32([[</span><span class="s2">0</span><span class="s0">, </span><span class="s2">0</span><span class="s1">]</span><span class="s0">, </span><span class="s1">[w - </span><span class="s2">350</span><span class="s0">, </span><span class="s2">0</span><span class="s1">]</span><span class="s0">, </span><span class="s1">[</span><span class="s2">400</span><span class="s0">, </span><span class="s1">h]</span><span class="s0">, </span><span class="s1">[w - </span><span class="s2">150</span><span class="s0">, </span><span class="s1">h]])</span>
+
+    <span class="s1">transform_matrix = cv2.getPerspectiveTransform(source</span><span class="s0">, </span><span class="s1">destination)</span>
+    <span class="s1">minv = cv2.getPerspectiveTransform(destination</span><span class="s0">, </span><span class="s1">source)</span>
+    <span class="s1">_image = cv2.warpPerspective(image</span><span class="s0">, </span><span class="s1">transform_matrix</span><span class="s0">, </span><span class="s1">(w</span><span class="s0">, </span><span class="s1">h))</span>
+
+    <span class="s0">return </span><span class="s1">_image </span><span class="s3">#, minv</span>
+
+<span class="s0">def </span><span class="s1">color_filter(image):</span>
+    <span class="s1">hls = cv2.cvtColor(image</span><span class="s0">, </span><span class="s1">cv2.COLOR_BGR2HLS)</span>
+
+    <span class="s1">lower = np.array([</span><span class="s2">20</span><span class="s0">, </span><span class="s2">150</span><span class="s0">, </span><span class="s2">20</span><span class="s1">])</span>
+    <span class="s1">upper = np.array([</span><span class="s2">255</span><span class="s0">, </span><span class="s2">255</span><span class="s0">, </span><span class="s2">255</span><span class="s1">])</span>
+
+    <span class="s1">yellow_lower = np.array([</span><span class="s2">0</span><span class="s0">, </span><span class="s2">85</span><span class="s0">, </span><span class="s2">81</span><span class="s1">])</span>
+    <span class="s1">yellow_upper = np.array([</span><span class="s2">190</span><span class="s0">, </span><span class="s2">255</span><span class="s0">, </span><span class="s2">255</span><span class="s1">])</span>
+
+    <span class="s1">yellow_mask = cv2.inRange(hls</span><span class="s0">, </span><span class="s1">yellow_lower</span><span class="s0">, </span><span class="s1">yellow_upper)</span>
+    <span class="s1">white_mask = cv2.inRange(hls</span><span class="s0">, </span><span class="s1">lower</span><span class="s0">, </span><span class="s1">upper)</span>
+    <span class="s1">mask = cv2.bitwise_or(yellow_mask</span><span class="s0">, </span><span class="s1">white_mask)</span>
+    <span class="s1">masked = cv2.bitwise_and(image</span><span class="s0">, </span><span class="s1">image</span><span class="s0">, </span><span class="s1">mask = mask)</span>
+
+    <span class="s0">return </span><span class="s1">masked</span>
+
+<span class="s0">def </span><span class="s1">roi(image):</span>
+    <span class="s1">x = int(image.shape[</span><span class="s2">1</span><span class="s1">])</span>
+    <span class="s1">y = int(image.shape[</span><span class="s2">0</span><span class="s1">])</span>
+
+    <span class="s3"># 한 붓 그리기</span>
+    <span class="s1">_shape = np.array(</span>
+        <span class="s1">[[int(</span><span class="s2">0.1</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.1</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(</span><span class="s2">0.1</span><span class="s1">*y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.4</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(</span><span class="s2">0.1</span><span class="s1">*y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.4</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.7</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.7</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(</span><span class="s2">0.1</span><span class="s1">*y)]</span><span class="s0">,</span><span class="s1">[int(</span><span class="s2">0.9</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(</span><span class="s2">0.1</span><span class="s1">*y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.9</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(y)]</span><span class="s0">, </span><span class="s1">[int(</span><span class="s2">0.2</span><span class="s1">*x)</span><span class="s0">, </span><span class="s1">int(y)]])</span>
+
+    <span class="s1">mask = np.zeros_like(image)</span>
+
+    <span class="s0">if </span><span class="s1">len(image.shape) &gt; </span><span class="s2">2</span><span class="s1">:</span>
+        <span class="s1">channel_count = image.shape[</span><span class="s2">2</span><span class="s1">]</span>
+        <span class="s1">ignore_mask_color = (</span><span class="s2">255</span><span class="s0">,</span><span class="s1">) * channel_count</span>
+    <span class="s0">else</span><span class="s1">:</span>
+        <span class="s1">ignore_mask_color = </span><span class="s2">255</span>
+
+    <span class="s1">cv2.fillPoly(mask</span><span class="s0">, </span><span class="s1">np.int32([_shape])</span><span class="s0">, </span><span class="s1">ignore_mask_color)</span>
+    <span class="s1">masked_image = cv2.bitwise_and(image</span><span class="s0">, </span><span class="s1">mask)</span>
+
+    <span class="s0">return </span><span class="s1">masked_image</span>
+
+<span class="s1">img = cv2.imread(</span><span class="s4">&quot;C:/Users/vlxj/Desktop/data/data5.png&quot;</span><span class="s1">)</span>
+<span class="s1">cap = cv2.VideoCapture(</span><span class="s4">&quot;C:/Users/vlxj/Desktop/data/data5.mp4&quot;</span><span class="s1">)</span>
+<span class="s0">while </span><span class="s1">(</span><span class="s0">True</span><span class="s1">):</span>
+    <span class="s1">ret</span><span class="s0">, </span><span class="s1">src = cap.read()</span>
+    <span class="s1">warped_img = wrapping(src)</span>
+<span class="s3"># warped_img = wrapping(img)</span>
+    <span class="s1">plt.imshow(cv2.cvtColor(warped_img</span><span class="s0">, </span><span class="s1">cv2.COLOR_BGR2RGB))</span>
+    <span class="s1">plt.show()</span>
+    <span class="s1">warped_img = color_filter(warped_img)</span>
+    <span class="s1">plt.imshow(cv2.cvtColor(warped_img</span><span class="s0">, </span><span class="s1">cv2.COLOR_BGR2RGB))</span>
+    <span class="s1">plt.show()</span>
+    <span class="s1">warped_img = roi(warped_img)</span>
+    <span class="s1">plt.imshow(cv2.cvtColor(warped_img</span><span class="s0">, </span><span class="s1">cv2.COLOR_BGR2RGB))</span>
+    <span class="s1">plt.show()</span></pre>
+</body>
+</html>

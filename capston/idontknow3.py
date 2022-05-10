@@ -204,7 +204,7 @@ while True:
 
     ## 선 분포도 조사 histogram
     leftbase, rightbase = plothistogram(thresh)
-    # plt.plot(hist)
+    # plt.plot(hist)d
     # plt.show()
 
     ## histogram 기반 window roi 영역

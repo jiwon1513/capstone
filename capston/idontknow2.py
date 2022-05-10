@@ -38,12 +38,12 @@ def roi(equ_frame, vertices):
     return masked
 
 
-video = cv2.VideoCapture("C:/Users/vlxj/Desktop/road.mp4")
+video = cv2.VideoCapture("C:/Users/vlxj/Desktop/data/road.mp4")
 while True:
     ret, orig_frame = video.read()
     # orig_frame = orig_frame[0:590, 0:1300]
     if not ret:
-        video = cv2.VideoCapture("C:/Users/vlxj/Desktop/road.mp4")
+        video = cv2.VideoCapture("C:/Users/vlxj/Desktop/data/road.mp4")
         continue
 
     # 가우시안 피라미드 다운샘플링 사용 가로세로 1/2 씩 줄어든 이미지로 변함

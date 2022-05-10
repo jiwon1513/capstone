@@ -5,21 +5,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-# url = 'https://www.youtube.com/watch?v=ipyzW38sHg0'
-url = 'https://youtu.be/Dvblw8N3bAw'
-video = pafy.new(url)
-best = video.getbest(preftype = 'mp4')
+# # url = 'https://www.youtube.com/watch?v=ipyzW38sHg0'
+# url = 'https://youtu.be/4MRX586qzHE'
+# video = pafy.new(url)
+# best = video.getbest(preftype = 'mp4')
+#
+# cap = cv2.VideoCapture(best.url)
+#
+# ym_per_pix = 30 / 720
+# xm_per_pix = 3.7 / 720
 
-cap = cv2.VideoCapture(best.url)
-
-ym_per_pix = 30 / 720
-xm_per_pix = 3.7 / 720
-
-
-frame_size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out1 = cv2.VideoWriter('C:/Users/vlxj/Desktop/opencv_y outube.mp4', fourcc, 20.0, frame_size)
+#
+# frame_size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+#
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+# out1 = cv2.VideoWriter('C:/Users/vlxj/Desktop/opencv_y7outube.mp4', fourcc, 20.0, frame_size)
 
 def color_filter(image):
     hls = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
@@ -61,8 +61,17 @@ def roi(image):
 def wrapping(image):
     (h, w) = (image.shape[0], image.shape[1])
 
-    source = np.float32([[w // 2 - 30, h * 0.53], [w // 2 + 60, h * 0.53], [w * 0.3, h], [w, h]])
-    destination = np.float32([[0, 0], [w-350, 0], [400, h], [w-150, h]])
+    # data3 전용 코드
+    source = np.float32([[w / 2 - 80, h / 2 + 120], [w / 2 + 110, h/2 + 120], [w/2 - 430, h / 2 + 330], [w / 2 + 655, h / 2 + 330]])
+    destination = np.float32([[500, 0], [w - 500, 0], [400, h], [w - 150, h]])
+
+    # 원래 코드
+    # source = np.float32([[w // 2 - 30, h * 0.53], [w // 2 + 60, h * 0.53], [w * 0.3, h], [w, h]])
+    # destination = np.float32([[0, 0], [w-350, 0], [400, h], [w-150, h]])
+
+    # data5 전용 코드
+    # source = np.float32([[w // 2 - 30, h * 0.6], [w // 2 + 45, h * 0.6], [w * 0.3, h], [w, h]])
+    # destination = np.float32([[500, 0], [w - 500, 0], [400, h], [w - 150, h]])
 
     transform_matrix = cv2.getPerspectiveTransform(source, destination)
     minv = cv2.getPerspectiveTransform(destination, source)
@@ -169,6 +178,8 @@ def draw_lane_lines(original_image, warped_image, Minv, draw_info):
 
     return pts_mean, result
 
+cap = cv2.VideoCapture("C:/Users/vlxj/Desktop/data/data3.mp4")
+
 while True:
     retval, img = cap.read()
     if not retval:
@@ -203,10 +214,10 @@ while True:
 
     ## 원본 이미지에 라인 넣기
     meanPts, result = draw_lane_lines(img, thresh, minverse, draw_info)
-    # cv2.imshow("result", result)
+    cv2.imshow("result", result)
 
     ## 동영상 녹화
-    out1.write(result)
+    # out1.write(result)
 
     key = cv2.waitKey(25)
     if key == 27:

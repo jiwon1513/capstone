@@ -4,8 +4,6 @@ from tensorflow.python.keras.models import *
 from tensorflow.python.keras.layers import *
 from tensorflow.python.keras import layers
 
-
-
 pretrained_url = "https://github.com/fchollet/deep-learning-models/" \
                  "releases/download/v0.2/" \
                  "resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5"
@@ -18,7 +16,6 @@ def one_side_pad(x):
 
 
 def identity_block(input_tensor, kernel_size, filters):
-
     filters1, filters2, filters3 = filters
 
     bn_axis = 3
@@ -40,7 +37,6 @@ def identity_block(input_tensor, kernel_size, filters):
 
 
 def conv_block(input_tensor, kernel_size, filters, strides=(2, 2)):
-
     filters1, filters2, filters3 = filters
 
     bn_axis = 3
@@ -64,16 +60,13 @@ def conv_block(input_tensor, kernel_size, filters, strides=(2, 2)):
     return x
 
 
-def get_resnet50_encoder(input_height=224,  input_width=224,
+def get_resnet50_encoder(input_height=224, input_width=224,
                          pretrained='imagenet', channels=3):
-
     assert input_height % 32 == 0
     assert input_width % 32 == 0
 
-
     img_input = Input(shape=(input_height, input_width, channels))
     bn_axis = 3
-
 
     x = ZeroPadding2D((3, 3))(img_input)
     x = Conv2D(64, (7, 7), strides=(2, 2))(x)
@@ -110,12 +103,13 @@ def get_resnet50_encoder(input_height=224,  input_width=224,
     x = AveragePooling2D((7, 7), name='avg_pool')(x)
     # f6 = x
 
-    if pretrained == 'imagenet':
-        weights_path = keras.utils.get_file(
-            pretrained_url.split("/")[-1], pretrained_url)
-        Model(img_input, x).load_weights(weights_path, by_name=True, skip_mismatch=True)
+    # if pretrained == 'imagenet':
+    #     weights_path = keras.utils.get_file(
+    #         pretrained_url.split("/")[-1], pretrained_url)
+    #     Model(img_input, x).load_weights(weights_path, by_name=True, skip_mismatch=True)
 
     return [f1, f2, f3, f4, f5]
+
 
 def ResNet_UNet_2(c=1, h=600, w=800, n=3):
     input = Input(shape=(h, w, n))
@@ -131,17 +125,25 @@ def ResNet_UNet_2(c=1, h=600, w=800, n=3):
     # x = Dropout(0.5)(x)
 
     # output
-    u5 = Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(x)
-    c6 = Conv2D(32, (3, 3), activation='relu', padding='same')(u5)
-    c6 = Conv2D(32, (3, 3), activation='relu', padding='same')(c6)
+    u5 = Conv2DTranspose(2048, (2, 2), strides=(2, 2), padding='same')(x)
+    c6 = Conv2D(1024, (3, 3), activation='relu', padding='same')(u5)
+    c6 = Conv2D(1024, (3, 3), activation='relu', padding='same')(c6)
 
-    u7 = Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(c6)
-    c7 = Conv2D(16, (3, 3), activation='relu', padding='same')(u7)
-    c7 = Conv2D(16, (3, 3), activation='relu', padding='same')(c7)
+    u7 = Conv2DTranspose(1024, (2, 2), strides=(2, 2), padding='same')(c6)
+    c7 = Conv2D(512, (3, 3), activation='relu', padding='same')(u7)
+    c7 = Conv2D(512, (3, 3), activation='relu', padding='same')(c7)
 
-    u8 = Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same')(c7)
-    c8 = Conv2D(8, (3, 3), activation='relu', padding='same')(u8)
-    c8 = Conv2D(8, (3, 3), activation='relu', padding='same')(c8)
+    u8 = Conv2DTranspose(512, (2, 2), strides=(2, 2), padding='same')(c7)
+    c8 = Conv2D(256, (3, 3), activation='relu', padding='same')(u8)
+    c6 = Conv2D(256, (3, 3), activation='relu', padding='same')(c8)
+
+    u7 = Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(c6)
+    c7 = Conv2D(128, (3, 3), activation='relu', padding='same')(u7)
+    c7 = Conv2D(128, (3, 3), activation='relu', padding='same')(c7)
+
+    u8 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c7)
+    c8 = Conv2D(64, (3, 3), activation='relu', padding='same')(u8)
+    c8 = Conv2D(64, (3, 3), activation='relu', padding='same')(c8)
 
     output = Conv2D(c, (1, 1), activation='sigmoid')(c8)
 

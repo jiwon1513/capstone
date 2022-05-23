@@ -1,137 +1,87 @@
-import numpy as np
-import tensorflow as tf
-from matplotlib import pyplot as plt
+import os
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+import matplotlib.pyplot as plt
+import warnings
 from tensorflow.python.client import device_lib
-from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from tensorflow.python.keras.models import load_model
+import tensorflow as tf
 
-import PSPNet
-import ResNet
-import UNet
-import _UNet
+from PSPNet import pspnet
+from UNet import unet_model
+from _UNet import ResNet_UNet, ResNet_UNet_3
+from image_preprocessing import dataset, data_generator
 
-file_path = 'D:/download/dataB/'
-
-# load images
-train_images=np.load(file_path+'train_images.npy')
-train_masks=np.load(file_path+'train_masks.npy')
-val_images=np.load(file_path+'val_images.npy')
-val_masks=np.load(file_path+'val_masks.npy')
-test_images=np.load(file_path+'test_images.npy')
-test_masks=np.load(file_path+'test_masks.npy')
-
-# train_images=np.load(file_path+'train_images2.npy')
-# train_masks=np.load(file_path+'train_masks2.npy')
-# val_images=np.load(file_path+'val_images2.npy')
-# val_masks=np.load(file_path+'val_masks2.npy')
-# test_images=np.load(file_path+'test_images2.npy')
-# test_masks=np.load(file_path+'test_masks2.npy')
-
-# model data
-model_name_list = ['UNet', 'UNet_mini', 'ResNet_UNet', 'PSPNet_UNet']
-height, width = 600, 800
-
-# Setting GPU
+# os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 device_lib.list_local_devices()
 gpus = tf.config.list_physical_devices('GPU')
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-# if gpus:
-#   try:
-#     tf.config.experimental.set_virtual_device_configuration(
-#         gpus[0],
-#         [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
-#   except RuntimeError as e:
-#     # Virtual devices must be set before GPUs have been initialized
-#     print(e)
-# config = tf.compat.v1.ConfigProto()
-# config.gpu_options.per_process_gpu_memory_fraction = 0.4
-# session = tf.compat.v1.Session(config=config)
 
+train_image_paths, val_image_paths, train_mask_paths, val_mask_paths, validation_image_paths, test_image_paths, validation_mask_paths, test_mask_paths = dataset()
+warnings.filterwarnings('ignore')
 
-# model = PSPNet.pspnet(1, height, width, 3)
-# model = ResNet.ResNet_UNet_2(1, 600 , 800, 3)
+batch_size = 8
+buffer_size = 200
 
-optimizer = [ # tf.keras.optimizers.Adam(lr=0.005, decay=0.0),
-              # tf.keras.optimizers.Adagrad(lr=0.01, decay=0.0),
-             tf.keras.optimizers.Adadelta(lr=1, decay=0.0)]
-earlystop = [EarlyStopping(patience=12, verbose=1),
-             EarlyStopping(patience=9, verbose=1)]
+train_dataset = data_generator(train_image_paths, train_mask_paths, buffer_size, batch_size)
+validation_dataset = data_generator(validation_image_paths, validation_mask_paths, buffer_size, batch_size)
+test_dataset = data_generator(test_image_paths, test_mask_paths, buffer_size, batch_size)
 
-for op, ea in zip(optimizer, earlystop):
-    model = UNet.UNet(1, height, width, 3)
+# img_height = 224
+# img_width = 224
+# num_channels = 3
+# filters = 32
+# n_classes = 13
 
-    model.compile(optimizer=op, loss='binary_crossentropy', metrics=['accuracy'])
+# model = unet_model((img_height, img_width, num_channels), filters=32, n_classes=13)
+# model = ResNet_UNet(n_classes=n_classes)
+# model = pspnet(13, 384, 576, 3)
+model = ResNet_UNet_3(13, 224, 224, 3)
+model.summary()
 
-    MODEL_SAVE_FOLDER_PATH=file_path+'temp/'
-    model_path = MODEL_SAVE_FOLDER_PATH + '{epoch:02d}-{val_loss:.4f}.hdf5'
+model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy', metrics = ['accuracy'])
+callback = EarlyStopping(monitor='val_accuracy', patience=20, restore_best_weights=True)
+reduce_lr = ReduceLROnPlateau(monitor='val_accuracy',factor=1e-1, patience=5, verbose=1, min_lr = 2e-6)
+epochs = 30
 
-    callbacks = [
-        ea,
-        ReduceLROnPlateau(patience=3, verbose=1),
-        ModelCheckpoint(filepath=model_path, verbose=1, save_best_only=True)
-    ]
+history = model.fit(train_dataset,
+                    validation_data = validation_dataset,
+                    epochs = epochs,
+                    # verbose=1,
+                    callbacks = [callback, reduce_lr],
+                    batch_size = batch_size,
+                    shuffle = True)
 
-    results = model.fit(train_images,
-                        train_masks,
-                        batch_size=16,
-                        epochs=100,
-                        callbacks=callbacks,
-                        validation_data=(val_images, val_masks)
-                        )
+acc = [0.] + history.history['accuracy']
+val_acc = [0.] + history.history['val_accuracy']
 
-    model_name = "UNet"
-    model.save(file_path + 'results/' + model_name + '_'
-               + (str(op).split('.')[-1]).split(' ')[0] + '_' + str(ea.patience) + '.h5')
+loss = history.history['loss']
+val_loss = history.history['val_loss']
 
-    # save plot
-    # accuracy plot
-    plt.subplot(2, 1, 1)
-    plt.plot(results.history['accuracy'])
-    plt.plot(results.history['val_accuracy'])
-    plt.title(model_name + ' accuracy')
-    plt.ylabel('accuracy')
-    plt.legend(['train', 'test'], loc='upper left')
+plt.figure(figsize=(8, 8))
+plt.subplot(2, 1, 1)
+plt.plot(acc, label='Training Accuracy')
+plt.plot(val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.ylabel('Accuracy')
+plt.ylim([min(plt.ylim()),1])
+plt.title('Training and Validation Accuracy')
 
-    # loss plot
-    plt.subplot(2, 1, 2)
-    plt.plot(results.history['loss'])
-    plt.plot(results.history['val_loss'])
-    plt.title(model_name + ' loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
+plt.subplot(2, 1, 2)
+plt.plot(loss, label='Training Loss')
+plt.plot(val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.ylabel('Cross Entropy')
+plt.ylim([0,1.0])
+plt.title('Training and Validation Loss')
+plt.xlabel('epoch')
+plt.show()
 
-    plt.savefig(file_path + 'results/' + model_name + '_'
-                + (str(op).split('.')[-1]).split(' ')[0] + '_' + str(ea.patience)
-                + '_plot.png')
-    # plt.show()
+# model.save('carla-image-segmentation-model.h5')
 
-    del model, results
+train_loss, train_accuracy = model.evaluate(train_dataset, batch_size = 32)
+validation_loss, validation_accuracy = model.evaluate(validation_dataset, batch_size = 32)
+test_loss, test_accuracy = model.evaluate(test_dataset, batch_size = 32)
 
-for op, ea in zip(optimizer, earlystop):
-    model_name = "UNet"
-    loaded_model = load_model(file_path + 'results/' + model_name + '_'
-               + (str(op).split('.')[-1]).split(' ')[0] + '_' + str(ea.patience) + '.h5')
-    NUMBER = 1
-    my_preds = loaded_model.predict(np.expand_dims(test_images[NUMBER], 0))
-    my_preds = my_preds.flatten()
-    my_preds = np.array([1 if i >= 0.5 else 0 for i in my_preds])
-
-    fig = plt.figure()
-    rows = 1
-    cols = 2
-
-    ax1 = fig.add_subplot(rows, cols, 1)
-    ax1.imshow(my_preds.reshape(600, 800))
-    ax1.set_title('prediction')
-    ax1.axis("off")
-
-    ax2 = fig.add_subplot(rows, cols, 2)
-    ax2.imshow(test_masks[NUMBER].reshape(600, 800))
-    ax2.set_title('real')
-    ax2.axis("off")
-
-    plt.savefig(file_path + 'results/' + model_name + '_'
-                + (str(op).split('.')[-1]).split(' ')[0] + '_' + str(ea.patience)
-                + '_plot.png')
-    # plt.show()
+print(f'Model Accuracy on the Training Dataset: {round(train_accuracy * 100, 2)}%')
+print(f'Model Accuracy on the Validation Dataset: {round(validation_accuracy * 100, 2)}%')
+print(f'Model Accuracy on the Test Dataset: {round(test_accuracy * 100, 2)}%')

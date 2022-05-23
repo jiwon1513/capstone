@@ -1,42 +1,69 @@
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import *
+from tensorflow.python.keras.layers import *
+from tensorflow.python.keras.models import *
 
 
-def UNet(n_classes, input_height=600, input_width=800, channels=3):
-    input_img = Input((input_height, input_width, channels), name='img')
+def encoding_block(inputs, filters, dropout_probability=0, max_pooling=True):
+    C = Conv2D(filters, 3, padding="same", kernel_initializer="he_normal")(inputs)
+    C = BatchNormalization()(C)
+    C = Activation("relu")(C)
 
-    c1 = Conv2D(8, (3, 3), activation='relu', padding='same') (input_img)
-    c1 = Conv2D(8, (3, 3), activation='relu', padding='same') (c1)
-    p1 = MaxPooling2D((2, 2)) (c1)
+    C = Conv2D(filters, 3, padding="same", kernel_initializer="he_normal")(C)
+    C = BatchNormalization()(C)
+    C = Activation("relu")(C)
 
-    c2 = Conv2D(16, (3, 3), activation='relu', padding='same') (p1)
-    c2 = Conv2D(16, (3, 3), activation='relu', padding='same') (c2)
-    p2 = MaxPooling2D((2, 2)) (c2)
+    skip_connection = C  # Set aside residual
 
-    c3 = Conv2D(32, (3, 3), activation='relu', padding='same') (p2)
-    c3 = Conv2D(32, (3, 3), activation='relu', padding='same') (c3)
-    p3 = MaxPooling2D((2, 2)) (c3)
+    # if max_pooling is True, add a MaxPooling2D with 2x2 pool_size
+    if max_pooling:
+        next_layer = MaxPooling2D(pool_size=(2, 2))(C)
+    else:
+        next_layer = C
 
-    c4 = Conv2D(64, (3, 3), activation='relu', padding='same') (p3)
-    c4 = Conv2D(64, (3, 3), activation='relu', padding='same') (c4)
+    return next_layer, skip_connection
 
-    u5 = Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same') (c4)
-    u5 = concatenate([u5, c3])
-    c6 = Conv2D(32, (3, 3), activation='relu', padding='same') (u5)
-    c6 = Conv2D(32, (3, 3), activation='relu', padding='same') (c6)
 
-    u7 = Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same') (c6)
-    u7 = concatenate([u7, c2])
-    c7 = Conv2D(16, (3, 3), activation='relu', padding='same') (u7)
-    c7 = Conv2D(16, (3, 3), activation='relu', padding='same') (c7)
+def decoding_block(inputs, skip_connection_input, filters):
+    CT = Conv2DTranspose(filters, 3, strides=(2, 2), padding="same", kernel_initializer="he_normal")(inputs)
 
-    u8 = Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same') (c7)
-    u8 = concatenate([u8, c1])
-    c8 = Conv2D(8, (3, 3), activation='relu', padding='same') (u8)
-    c8 = Conv2D(8, (3, 3), activation='relu', padding='same') (c8)
+    residual_connection = concatenate([CT, skip_connection_input], axis=3)
 
-    outputs = Conv2D(n_classes, (1, 1), activation='sigmoid') (c8)
+    C = Conv2D(filters, 3, padding="same", kernel_initializer="he_normal")(residual_connection)
+    C = BatchNormalization()(C)
+    C = Activation("relu")(C)
 
-    model = Model(inputs=[input_img], outputs=[outputs])
+    C = Conv2D(filters, 3, padding="same", kernel_initializer="he_normal")(C)
+    C = BatchNormalization()(C)
+    C = Activation("relu")(C)
+
+    return C
+
+
+def unet_model(input_size, filters, n_classes):
+    inputs = Input(input_size)
+
+    # Contracting Path (encoding)
+    C1, S1 = encoding_block(inputs, filters, max_pooling=True)
+    C2, S2 = encoding_block(C1, filters * 2, max_pooling=True)
+    C3, S3 = encoding_block(C2, filters * 4, max_pooling=True)
+    C4, S4 = encoding_block(C3, filters * 8, max_pooling=True)
+
+    C5, S5 = encoding_block(C4, filters * 16, max_pooling=False)
+
+    # Expanding Path (decoding)
+    U6 = decoding_block(C5, S4, filters * 8)
+    U7 = decoding_block(U6, S3, filters * 4)
+    U8 = decoding_block(U7, S2, filters=filters * 2)
+    U9 = decoding_block(U8, S1, filters=filters)
+
+    C10 = Conv2D(filters,
+                 3,
+                 activation='relu',
+                 padding='same',
+                 kernel_initializer='he_normal')(U9)
+
+    # Add a Conv2D layer with n_classes filter, kernel size of 1 and a 'same' padding
+    C11 = Conv2D(filters=n_classes, kernel_size=(1, 1), activation='sigmoid', padding='same')(C10)
+
+    model = Model(inputs=inputs, outputs=C11)
 
     return model

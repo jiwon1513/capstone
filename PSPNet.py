@@ -71,7 +71,7 @@ def resnet50_pspnet(n_classes,  input_height=600, input_width=800, channels=3):
     return model
 
 
-def pspnet(n_classes,  input_height=600, input_width=800, channels=3):
+def pspnet(n_classes,  input_height=384, input_width=576, channels=3):
 
     model = _pspnet(n_classes, vanilla_encoder,
                     input_height=input_height, input_width=input_width, channels=channels)

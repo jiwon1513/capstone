@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # file_path = 'E:/dataset/'
 # image_path = file_path + 'town5/RGB/'

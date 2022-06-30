@@ -6,6 +6,8 @@ import imageio
 import numpy as np
 import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 
 def list_image_paths(directory_paths):
     image_paths = []

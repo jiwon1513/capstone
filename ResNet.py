@@ -111,7 +111,7 @@ def get_resnet50_encoder(input_height=224, input_width=224,
     return [f1, f2, f3, f4, f5]
 
 
-def ResNet_UNet_2(c=1, h=600, w=800, n=3):
+def ResNet_UNet_2(c=1, h=224, w=224, n=3):
     input = Input(shape=(h, w, n))
 
     resnet = ResNet50(weights='imagenet', include_top=False)

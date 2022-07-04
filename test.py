@@ -45,16 +45,17 @@ for n in range(len(image_list)):
     # birdeyeview = tf.image.crop_and_resize(pred, boxes=[[0, 0, 1, 1]], crop_size=[256, 256], box_indices=[0])
     pred_num = pred.numpy()
     birdeyeview = wrapping(pred_num[0], t1, t2, b1, b2)
-    B = tf.math.argmax(pred_num[0], 2)
-    # B = tf.math.argmax(birdeyeview, 2)
-    # C = tf.keras.backend.eval(B)
+    B = tf.math.argmax(pred_num[0], 2)    # segmenstation에 적용시
+    # B = tf.math.argmax(birdeyeview, 2)    # birdeyeview에 적용시
+    # C = tf.keras.backend.eval(B)    # birdeyeview에 적용시
 
     line_left_top, line_left_bottom, line_right_top, line_right_bottom = \
         [0, 0], [0, 256], [256, 0], [256, 256]
 
-    # line = tf.where(tf.equal(C, 2))
-    line = tf.where(tf.equal(B, 2))
-    line = line.numpy()
+    line = tf.where(tf.equal(B, 2))    # segmenstation에 적용시
+    # line = tf.where(tf.equal(C, 2))    # birdeyeview에 적용시
+
+    line = line.numpy() # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
     old = 0
     new = []
     for i in range(len(line)):
@@ -65,13 +66,11 @@ for n in range(len(image_list)):
             old = now
             new.append(line[i])
     line = np.transpose(new)
+
     x = line[0]
-    # x = line[1][::-1]
     y = line[1]
-    # y = line[0][::-1]
     if len(line[0]) > 2:
-        # f1 = interpolate.interp1d(x, y)
-        f1 = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+        f1 = interpolate.InterpolatedUnivariateSpline(x, y, k=2)    # 보간법, 2차함수, 점 3개 이상 있으면 update
 
 
     print(f'{n}th predict time: {time() - start}')
@@ -84,11 +83,10 @@ for n in range(len(image_list)):
     plt.subplot(1, 3, 2)
     plt.imshow(pred[0])
     [plt.scatter(point[0], point[1]) for point in [t1, t2, b1, b2]]
-    # plt.plot(list(filter(lambda x: (f1(x) < 256) & (f1(x) >= 0), plot_x)), list(filter(lambda x: (x < 256) & (x >= 0), f1(plot_x))))
-    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f1(plot_x))), list(filter(lambda x: (f1(x) < 256) & (f1(x) >= 0), plot_x)))
+    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f1(plot_x))), list(filter(lambda x: (f1(x) < 256) & (f1(x) >= 0), plot_x)))    # segmenstation에 적용시
     plt.subplot(1, 3, 3)
     plt.imshow(birdeyeview)
-    # plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f1(plot_x))), list(filter(lambda x: (f1(x) < 256) & (f1(x) >= 0), plot_x)))
+    # plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f1(plot_x))), list(filter(lambda x: (f1(x) < 256) & (f1(x) >= 0), plot_x)))    # birdeyeview에 적용시
     plt.draw()
     plt.pause(0.01)
     figure.clear()

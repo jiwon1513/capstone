@@ -127,23 +127,35 @@ def ResNet_UNet_2(c=1, h=224, w=224, n=3):
     # output
     u5 = Conv2DTranspose(2048, (2, 2), strides=(2, 2), padding='same')(x)
     c6 = Conv2D(1024, (3, 3), activation='relu', padding='same')(u5)
+    c6 = BatchNormalization()(c6)
     c6 = Conv2D(1024, (3, 3), activation='relu', padding='same')(c6)
+    c6 = BatchNormalization()(c6)
 
     u7 = Conv2DTranspose(1024, (2, 2), strides=(2, 2), padding='same')(c6)
     c7 = Conv2D(512, (3, 3), activation='relu', padding='same')(u7)
+    c7 = BatchNormalization()(c7)
     c7 = Conv2D(512, (3, 3), activation='relu', padding='same')(c7)
+    c7 = BatchNormalization()(c7)
 
     u8 = Conv2DTranspose(512, (2, 2), strides=(2, 2), padding='same')(c7)
     c8 = Conv2D(256, (3, 3), activation='relu', padding='same')(u8)
-    c6 = Conv2D(256, (3, 3), activation='relu', padding='same')(c8)
+    c8 = BatchNormalization()(c8)
+    c8 = Conv2D(256, (3, 3), activation='relu', padding='same')(c8)
+    c8 = BatchNormalization()(c8)
 
-    u7 = Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(c6)
+    u7 = Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(c8)
     c7 = Conv2D(128, (3, 3), activation='relu', padding='same')(u7)
+    c7 = BatchNormalization()(c7)
     c7 = Conv2D(128, (3, 3), activation='relu', padding='same')(c7)
+    c7 = BatchNormalization()(c7)
 
     u8 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c7)
     c8 = Conv2D(64, (3, 3), activation='relu', padding='same')(u8)
+    c8 = BatchNormalization()(c8)
     c8 = Conv2D(64, (3, 3), activation='relu', padding='same')(c8)
+    c8 = BatchNormalization()(c8)
+
+    c8 = Conv2D(32, (3, 3), activation='relu', padding='same')(c8)
 
     output = Conv2D(c, (1, 1), activation='sigmoid')(c8)
 

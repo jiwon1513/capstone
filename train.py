@@ -23,7 +23,7 @@ print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('
 # model.summary()
 classes = 3
 file_path = 'E:/dataset/'
-i = 3
+i = 2
 
 if i == 0:
     height, width = 256, 256

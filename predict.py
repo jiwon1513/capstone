@@ -53,19 +53,23 @@ def loadModel(num):
     if i == 0:
         height, width = 256, 256
         name = "UNet"
-        model = load_model(file_path + 'carla-image-segmentation-' + name + '.h5')
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
     elif i == 1:
         height, width = 192, 192
         name = "PSPNet"
-        model = load_model(file_path + 'carla-image-segmentation-' + name + '.h5')
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
     elif i == 2:
         height, width = 224, 224
         name = "ResNet"
-        model = load_model(file_path + 'carla-image-segmentation-' + name + '.h5')
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
     elif i == 3:
+        height, width = 224, 224
+        name = "ResNet2"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+    elif i == 4:
         height, width = 192, 192
         name = "ResNet_PSPNet"
-        model = load_model(file_path + 'carla-image-segmentation-' + name + '.h5')
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
 
     print('load images')
     return model, height, width, name
@@ -84,7 +88,7 @@ def loadModel(num):
 
 
 def main():
-    num = 0
+    num = 3
     model, height, width, name = loadModel(num)
     # train_image = np.load(file_path + f'train_images_{height}_{width}.npy')
     # train_mask = np.load(file_path + f'train_masks_{height}_{width}.npy')
@@ -107,3 +111,6 @@ def main():
         plt.imshow(my_preds.reshape(height, width, 3))
     # plt.savefig(f'{main_path}test_{height}_{width}.png')
     plt.show()
+
+if __name__ == "__main__":
+    main()

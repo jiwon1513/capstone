@@ -21,6 +21,7 @@ import natsort
 image_list = natsort.natsorted(image_list)
 mask_list = natsort.natsorted(mask_list)
 i, j, k = 0, 0, 0
+
 while(True):
     if int(image_list[i].split('/')[-1].split('.')[0]) > int(mask_list[j].split('/')[-1].split('.')[0]):
         j += 1

@@ -99,8 +99,8 @@ for n in range(len(image_list)):
              list(filter(lambda x: (f1l(x) < int(width/2)) & (f1l(x) >= 0), plot_x)), '--', color='k')    # segmenstation에 적용시
     plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), load_1l(plot_x))),
              list(filter(lambda x: (load_1l(x) < int(width/2)) & (load_1l(x) >= 0), plot_x)), '--', color='w')
-    plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), load_1r(plot_x))),
-             list(filter(lambda x: (load_1r(x) < int(width/2)) & (load_1r(x) >= 0), plot_x)), '--', color='w')
+    plt.plot(list(filter(lambda x: (x > int(width/2)) & (x >= 0), load_1r(plot_x))),
+             list(filter(lambda x: (load_1r(x) > int(width/2)) & (load_1r(x) >= 0), plot_x)), '--', color='w')
 
     plt.subplot(1, 3, 3)
     plt.imshow(birdeyeview)

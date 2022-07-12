@@ -31,13 +31,13 @@ x = [10, 60, 110]
 y = [240, 195, 150]
 # y = [width-16, width-61, width-116]
 # f1 = interpolate.interp1d(x, y)
-f1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-f1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+# f1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+# f1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 f2l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 f2r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 
-load_1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-load_1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+# load_1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+# load_1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 load_2l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 load_2r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 plot_x = np.arange(height)
@@ -58,7 +58,7 @@ for n in range(len(image_list)):
 
     pred_num = pred.numpy()
 
-    B = tf.math.argmax(pred_num[0], 2)    # segmenstation에 적용시
+    # B = tf.math.argmax(pred_num[0], 2)    # segmenstation에 적용시
 
     birdeyeview = wrapping(pred_num[0], t1, t2, b1, b2)
     image_bev = tf.math.argmax(birdeyeview, 2)    # birdeyeview에 적용시
@@ -68,20 +68,20 @@ for n in range(len(image_list)):
         [0, 0], [0, height], [width, 0], [width, height]
 
     # 값이 2인 곳 위치 출력
-    line = tf.where(tf.equal(B, 2))    # segmenstation에 적용시
+    # line = tf.where(tf.equal(B, 2))    # segmenstation에 적용시
     line_bev = tf.where(tf.equal(image_bev, 2))    # birdeyeview에 적용시
     # print(line)
 
-    line = line.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
+    # line = line.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
     line_bev = line_bev.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
 
-    f1l, f1r = make_interpolate(f1l, f1r, line)
+    # f1l, f1r = make_interpolate(f1l, f1r, line)
     f2l, f2r = make_interpolate(f2l, f2r, line_bev)
 
-    line_load = tf.where(tf.equal(B, 1)).numpy()    # segmenstation에 적용시
+    # line_load = tf.where(tf.equal(B, 1)).numpy()    # segmenstation에 적용시
     line_load_bev = tf.where(tf.equal(image_bev, 1)).numpy()    # birdeyeview에 적용시
 
-    load_1l, load_1r = make_interpolate(load_1l, load_1r, line_load)
+    # load_1l, load_1r = make_interpolate(load_1l, load_1r, line_load)
     load_2l, load_2r = make_interpolate(load_2l, load_2r, line_load_bev)
 
     print(f'{n}th predict time: {time() - start}')
@@ -95,17 +95,19 @@ for n in range(len(image_list)):
     plt.imshow(pred[0])
     [plt.scatter(point[0], point[1]) for point in [t1, t2, b1, b2]]
 
-    plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), f1l(plot_x))),
-             list(filter(lambda x: (f1l(x) < int(width/2)) & (f1l(x) >= 0), plot_x)), '--', color='k')    # segmenstation에 적용시
-    plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), load_1l(plot_x))),
-             list(filter(lambda x: (load_1l(x) < int(width/2)) & (load_1l(x) >= 0), plot_x)), '--', color='w')
-    plt.plot(list(filter(lambda x: (x > int(width/2)) & (x >= 0), load_1r(plot_x))),
-             list(filter(lambda x: (load_1r(x) > int(width/2)) & (load_1r(x) >= 0), plot_x)), '--', color='w')
+    # plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), f1l(plot_x))),
+    #          list(filter(lambda x: (f1l(x) < int(width/2)) & (f1l(x) >= 0), plot_x)), '--', color='k')    # segmenstation에 적용시
+    # plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), load_1l(plot_x))),
+    #          list(filter(lambda x: (load_1l(x) < int(width/2)) & (load_1l(x) >= 0), plot_x)), '--', color='w')
+    # plt.plot(list(filter(lambda x: (x > int(width/2)) & (x >= 0), load_1r(plot_x))),
+    #          list(filter(lambda x: (load_1r(x) > int(width/2)) & (load_1r(x) >= 0), plot_x)), '--', color='w')
 
     plt.subplot(1, 3, 3)
     plt.imshow(birdeyeview)
     plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2l(plot_x))),
              list(filter(lambda x: (f2l(x) < 256) & (f2l(x) >= 0), plot_x)), '--', color='k')    # birdeyeview에 적용시
+    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2r(plot_x))),
+             list(filter(lambda x: (f2r(x) < 256) & (f2r(x) >= 0), plot_x)), '--', color='b')
     plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2l(plot_x))),
              list(filter(lambda x: (load_2l(x) < 256) & (load_2l(x) >= 0), plot_x)), '--', color='w')
     plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2r(plot_x))),

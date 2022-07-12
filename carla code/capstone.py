@@ -164,6 +164,13 @@ def main():
     t1, t2, b1, b2 = [100, 150], [156, 150], [0, 240], [256, 240]
     # model = 0
 
+    # initial data
+    f2l = myImport.init_interpolate()
+    f2r = myImport.init_interpolate()
+    load_2l = myImport.init_interpolate()
+    load_2r = myImport.init_interpolate()
+    plot_x = np.arange(height)
+
     try:
         m = world.get_map()
         start_pose = random.choice(m.get_spawn_points())
@@ -189,6 +196,8 @@ def main():
         #     attach_to=vehicle)
         # actor_list.append(camera_semseg)
 
+
+
         # Create a synchronous mode context.
         with CarlaSyncMode(world, camera_rgb, fps=5) as sync_mode:
             while True:
@@ -199,22 +208,41 @@ def main():
                 # Advance the simulation and wait for the data.
                 snapshot, image_rgb = sync_mode.tick(timeout=2.0)
                 image, pred, birdeyeview = tf_image(image_rgb, model)
+                line_bev, line_load_bev = myImport.preprocessing_interpolate(pred, height, width)
+
                 plt.subplot(1, 3, 1)
                 plt.imshow(image)
                 plt.xticks([])
                 plt.yticks([])
                 plt.xlabel('raw image', fontsize=15)
+
                 plt.subplot(1, 3, 2)
                 plt.imshow(pred)
                 plt.xticks([])
                 plt.yticks([])
                 plt.xlabel('segmentation', fontsize=15)
                 [plt.scatter(point[0], point[1]) for point in [t1, t2, b1, b2]]
+
                 plt.subplot(1, 3, 3)
                 plt.imshow(birdeyeview)
+
+                f2l, f2r = myImport.make_interpolate(f2l, f2r, line_bev)
+                load_2l, load_2r = myImport.make_interpolate(load_2l, load_2r, line_load_bev)
+
+                plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2l(plot_x))),
+                         list(filter(lambda x: (f2l(x) < 256) & (f2l(x) >= 0), plot_x)), '--',
+                         color='k')  # birdeyeview에 적용시
+                plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2r(plot_x))),
+                         list(filter(lambda x: (f2r(x) < 256) & (f2r(x) >= 0), plot_x)), '--', color='w')
+
+                plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2l(plot_x))),
+                         list(filter(lambda x: (load_2l(x) < 256) & (load_2l(x) >= 0), plot_x)), '--', color='w')
+                plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2r(plot_x))),
+                         list(filter(lambda x: (load_2r(x) < 256) & (load_2r(x) >= 0), plot_x)), '--', color='w')
                 plt.xticks([])
                 plt.yticks([])
                 plt.xlabel('birdeyeview', fontsize=15)
+
                 plt.draw()
                 plt.pause(0.001)
                 figure.clear()

@@ -80,12 +80,18 @@ def make_interpolate(f1, f2, line):
         x_left = left[0]
         y_left = left[1]
         if len(x_left) > 2:
-            f1 = interpolate.InterpolatedUnivariateSpline([x_left[0], x_left[-1]], [y_left[0], y_left[-1]], k=1)
+            # f1 = np.polyfit([x_left[0], x_left[-1]], [y_left[0], y_left[-1]], 3)
+            f1 = np.polyfit(x_left, y_left, 3)
+            f1 = np.poly1d(f1)
+            # f1 = interpolate.InterpolatedUnivariateSpline([x_left[0], x_left[-1]], [y_left[0], y_left[-1]], k=1)
     if len(right) >= 2:
         x_right = right[0]
         y_right = right[1]
         if len(x_right) > 2:
-            f2 = interpolate.InterpolatedUnivariateSpline([x_right[0], x_right[-1]], [y_right[0], y_right[-1]], k=1)
+            # f2 = np.polyfit([x_right[0], x_right[-1]], [y_right[0], y_right[-1]], 3)
+            f2 = np.polyfit(x_right, y_right, 3)
+            f2 = np.poly1d(f2)
+            # f2 = interpolate.InterpolatedUnivariateSpline([x_right[0], x_right[-1]], [y_right[0], y_right[-1]], k=1)
 
     # if len(line) >= 2:
     #     # x = line[0]

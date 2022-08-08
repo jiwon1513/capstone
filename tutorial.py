@@ -42,7 +42,7 @@ IM_HEIGHT = 480
 
 
 #yolov5
-''' 
+'''
 class ObjectDetection:
     # YouTube 동영상에 YOLOv5 구현
 
@@ -118,8 +118,8 @@ class ObjectDetection:
 def class_to_label(x):
         # x 숫자 레이블 -> 문자열 레이블로 반환
         return model.names[int(x)]
-
-'''    
+'''
+    
 def process_img(image):
     i = np.array(image.raw_data)
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
@@ -129,9 +129,19 @@ def process_img(image):
     use_gpu = True
     lane_detector = UltrafastLaneDetector(model_path, model_type, use_gpu)
     output_img, points = lane_detector.detect_lanes(frame)
+    #print(points)
     
+    vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
+    v = vehicle.get_velocity()
+    sp = 3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)
+    
+    if sp >30  :
+        vehicle.apply_control(carla.VehicleControl(throttle = 0.5, steer=0))
+        
+          
     #yolov5
-    '''results = model(frame)
+    '''
+    results = model(frame)
     labels, cord = results.xyxyn[0][:, -1].cpu().numpy(), results.xyxyn[0][:, :-1].cpu().numpy()
     n = len(labels)
     x_shape, y_shape = frame.shape[1], frame.shape[0]
@@ -146,9 +156,9 @@ def process_img(image):
            #cv2.putText(frame,class_to_label(labels[i]) + ': ' + str(x1) + ', ' + str(x2) + ', ' + str(y1) + ', ' + str(y2),(x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.3, bgr, 2)
             cv2.putText(frame,class_to_label(labels[i]),(x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.3, bgr, 2)
             
-    '''          
-    cv2.imshow("",frame)
-    cv2.waitKey(1)
+    '''         
+    #cv2.imshow("",frame)
+    #cv2.waitKey(1)
     #im_rgb = cv2.cvtColor(predict_image.imgs[0], cv2.COLOR_BGR2RGB) # Because of OpenCV reading images as BGR
     #cv2.imshow("",im_rgb)
 
@@ -168,13 +178,15 @@ def convertimage(image):
     v = vehicle.get_velocity()
     sp = 3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)
     
-    if sp >60  :
+    if sp >30  :
         vehicle.apply_control(carla.VehicleControl(throttle = 0.5, steer=0))
    
     #cv2.imshow("", i)
     #cv2.waitKey(1)
 
 # Render object to keep and pass the PyGame surface
+
+
 class RenderObject(object):
     def __init__(self, width, height):
         init_image = np.random.randint(0,255,(height,width,3),dtype='uint8')
@@ -375,12 +387,12 @@ try:
 
     vehicle = world.spawn_actor(bp, spawn_point)
     
-    vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
+    #vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
 
     actor_list.append(vehicle)
     
     #pygame camera
-    '''
+    
     camera_init_trans = carla.Transform(carla.Location(x=-5, z =3),carla.Rotation(pitch=-20))
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera = world.spawn_actor(camera_bp,camera_init_trans, attach_to=vehicle)
@@ -393,10 +405,30 @@ try:
     image_h = camera_bp.get_attribute("image_size_y").as_int()
 
 # Instantiate objects for rendering and vehicle control
-    renderObject = RenderObject(image_w, image_h)'''
+    renderObject = RenderObject(image_w, image_h)
     
+ 
+    
+   
+    # spawn the sensor and attach to vehicle.
+    blueprint = blueprint_library.find('sensor.camera.rgb')
+    
+    # change the dimensions of the image
+    blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
+    blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
+    blueprint.set_attribute('fov', '110')
+    blueprint.set_attribute('sensor_tick','0.3')
+    
+    spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
+    sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
+    # add sensor to list of actors
+    actor_list.append(sensor)
+    # do something with this sensor
+    sensor.listen(lambda image: process_img(image))  
+    
+    '''
     #segcamera 
-    '''blueprint = blueprint_library.find('sensor.camera.semantic_segmentation')
+    blueprint = blueprint_library.find('sensor.camera.semantic_segmentation')
     
     # change the dimensions of the image
     blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
@@ -410,30 +442,12 @@ try:
     
     spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
     # spawn the sensor and attach to vehicle.
-    sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
+    sensor2 = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
     # add sensor to list of actors
-    actor_list.append(sensor)
+    actor_list.append(sensor2)
     # do something with this sensor
-    sensor.listen(lambda image: convertimage(image))  '''
-    
-    spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
-    # spawn the sensor and attach to vehicle.
-    blueprint = blueprint_library.find('sensor.camera.rgb')
-    
-    # change the dimensions of the image
-    blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
-    blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
-    blueprint.set_attribute('fov', '110')
-    blueprint.set_attribute('sensor_tick','0.3')
-    
-    sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
-    # add sensor to list of actors
-    actor_list.append(sensor)
-    # do something with this sensor
-    sensor.listen(lambda image: process_img(image))  
-    
-    
-    """    
+    sensor2.listen(lambda image: convertimage(image))   '''  
+       
     pygame.init()
     hud = HUD(100,480)
     gameDisplay = pygame.display.set_mode((IM_WIDTH, IM_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -472,12 +486,12 @@ try:
     #vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
     #time.sleep(5)
 
-  """
-    time.sleep(15)
+
+   
 finally:
     print('destroying actors')
     for actor in actor_list:
         actor.destroy()
-   # camera.stop()
+    camera.stop()
     pygame.quit()        
     print('done.')

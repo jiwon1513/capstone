@@ -19,7 +19,7 @@ tusimple_row_anchor = [ 64,  68,  72,  76,  80,  84,  88,  92,  96, 100, 104, 10
 			272, 276, 280, 284]
 culane_row_anchor = [121, 131, 141, 150, 160, 170, 180, 189, 199, 209, 219, 228, 238, 248, 258, 267, 277, 287]
 
-global new_point
+
 
 class ModelType(Enum):
 	TUSIMPLE = 0
@@ -188,11 +188,15 @@ class UltrafastLaneDetector():
                 x =len(lanes_points[2])
             else :
                 x = len(lanes_points[1]) 
+                
+            print("left : " ,lanes_points[1])
+            print("right : " ,lanes_points[2])
             
+            global new_point
             new_point = []
             for i in range(x):
                 new_point.append([int((lanes_points[1][i][0] + lanes_points[2][i][0])//2) , int((lanes_points[1][i][1] + lanes_points[2][i][1])//2)])
-            #print(new_point)
+          
             for i in range(x):
                 cv2.circle(lane_segment_img, new_point[i],5, (0,255,0), -1)
             

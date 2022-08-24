@@ -33,13 +33,16 @@ import pygame
 import math
 import weakref
 import torch
+from matplotlib import pyplot as plt
+import time
+import queue
 
-
-IM_WIDTH = 640
-IM_HEIGHT = 480
+IM_WIDTH = 1280
+IM_HEIGHT = 720
+Yaw = 90
 #model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 
-
+IMAGE = []
 
 #yolov5
 '''
@@ -119,26 +122,49 @@ def class_to_label(x):
         # x 숫자 레이블 -> 문자열 레이블로 반환
         return model.names[int(x)]
 '''
+
+def steerangle(p1,p2):  
+    a = p1[0] - p2[0]    
+    b = p1[1] - p2[1]
+    length1 = math.sqrt((a*a) + (b*b))
+    #print("L :",length1)
+    #print("b = ", b)
+    angle = math.acos(b/length1)
+    if a>0 :
+        return angle
+    else :
+        return -angle
     
-def process_img(image):
+def process_img(image, lane_detector):
+    start = time.time()
+   
     i = np.array(image.raw_data)
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
     frame = i2[:, :, :3]
-    model_path = "C:/Users/mycom/git/ufld/models/tusimple_18.pth"
-    model_type = ModelType.TUSIMPLE
-    use_gpu = True
-    lane_detector = UltrafastLaneDetector(model_path, model_type, use_gpu)
-    output_img, points = lane_detector.detect_lanes(frame)
-    #print(points)
-    
+    # output_img, points = lane_detector.detect_lanes(frame)
+    output_img,point = lane_detector.detect_lanes(frame)
+    #print(point)
+    mid = len(point)//2
+    print("time :", time.time() - start)
     vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
+    a = steerangle(point[mid], [640,720]) 
+    print(a)
+    if a>30:
+        vehicle.apply_control(carla.VehicleControl(throttle= 0.5, steer= a/20))
+        
+        
     v = vehicle.get_velocity()
     sp = 3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)
     
     if sp >30  :
         vehicle.apply_control(carla.VehicleControl(throttle = 0.5, steer=0))
-        
-          
+
+    global IMAGE
+    global figure
+    IMAGE = output_img
+
+    
+    print("time :", time.time() - start)
     #yolov5
     '''
     results = model(frame)
@@ -157,18 +183,40 @@ def process_img(image):
             cv2.putText(frame,class_to_label(labels[i]),(x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.3, bgr, 2)
             
     '''         
-    #cv2.imshow("",frame)
-    #cv2.waitKey(1)
-    #im_rgb = cv2.cvtColor(predict_image.imgs[0], cv2.COLOR_BGR2RGB) # Because of OpenCV reading images as BGR
-    #cv2.imshow("",im_rgb)
+    # cv2.imshow("",frame)
+    # cv2.waitKey(1)
+    # im_rgb = cv2.cvtColor(predict_image.imgs[0], cv2.COLOR_BGR2RGB) # Because of OpenCV reading images as BGR
+    # cv2.imshow("",im_rgb)
 
+
+def process_img1(image, lane_detector):
+    
    
+    i = np.array(image.raw_data)
+    i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
+    frame = i2[:, :, :3]
+    # output_img, points = lane_detector.detect_lanes(frame)
+    output_img,point = lane_detector.detect_lanes(frame)
+    #print(point)
+
+    global IMAGE1
     
+    IMAGE1 = output_img
     
+def process_img2(image, lane_detector):
+    
+   
+    i = np.array(image.raw_data)
+    i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
+    frame = i2[:, :, :3]
+    # output_img, points = lane_detector.detect_lanes(frame)
+    output_img,point = lane_detector.detect_lanes(frame)
+    #print(point)
 
-
-
-
+    global IMAGE2
+    
+    IMAGE2 = output_img    
+    
 def convertimage(image):
     image.convert(cc.CityScapesPalette)
     i = np.reshape(np.copy(image.raw_data),(IM_HEIGHT,IM_WIDTH,4))
@@ -372,21 +420,35 @@ class IMUSensor(object):
 
     
 actor_list = []
+camera_list = []
+figure = plt.figure()
 try:
     client = carla.Client('localhost', 2000)
     client.set_timeout(200.0)
 
     world = client.get_world()
 
+    model_path = "C:/Users/mycom/git/ufld/models/tusimple_18.pth"
+    model_type = ModelType.TUSIMPLE
+    use_gpu = True
+    lane_detector = UltrafastLaneDetector(model_path, model_type, use_gpu)
+
     blueprint_library = world.get_blueprint_library()
 
     bp = blueprint_library.filter('model3')[0]
     print(bp)
 
-    spawn_point = random.choice(world.get_map().get_spawn_points())
-
+   
+    x, y, z, degree = 105.7, 90, 1, 270
+    spawn_point = carla.Transform(carla.Location(x, y, z), carla.Rotation(0, degree, 0))
+    #spawn_point = random.choice(world.get_map().get_spawn_points())
     vehicle = world.spawn_actor(bp, spawn_point)
-    
+
+    #physics_control = vehicle.get_physics_control()
+
+    # For each Wheel Physics Control, print maximum steer angle
+    #for wheel in physics_control.wheels:
+        #print (wheel.max_steer_angle)    
     #vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
 
     actor_list.append(vehicle)
@@ -396,36 +458,53 @@ try:
     camera_init_trans = carla.Transform(carla.Location(x=-5, z =3),carla.Rotation(pitch=-20))
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera = world.spawn_actor(camera_bp,camera_init_trans, attach_to=vehicle)
+    camera_list.append(camera)
 
 # Start camera with PyGame callback
     camera.listen(lambda image: pygame_callback(image, renderObject))
 
 # Get camera dimensions
+    global image_w
+    global image_h
     image_w = camera_bp.get_attribute("image_size_x").as_int()
     image_h = camera_bp.get_attribute("image_size_y").as_int()
+    
 
 # Instantiate objects for rendering and vehicle control
     renderObject = RenderObject(image_w, image_h)
-    
- 
-    
-   
+
     # spawn the sensor and attach to vehicle.
     blueprint = blueprint_library.find('sensor.camera.rgb')
     
+    blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
+    blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
     # change the dimensions of the image
+    '''
     blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
     blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
     blueprint.set_attribute('fov', '110')
-    blueprint.set_attribute('sensor_tick','0.3')
+    blueprint.set_attribute('sensor_tick','0.3')'''
     
     spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
     sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
     # add sensor to list of actors
     actor_list.append(sensor)
     # do something with this sensor
-    sensor.listen(lambda image: process_img(image))  
     
+    sensor.listen(lambda image: process_img(image, lane_detector))
+    
+    
+    
+    spawn_point1 = carla.Transform(carla.Location(x=2.5 ,y = 2.5 ,z=0.7), carla.Rotation(yaw = 90))
+    sensor1 = world.spawn_actor(blueprint, spawn_point1, attach_to=vehicle)
+    actor_list.append(sensor1)
+    sensor1.listen(lambda image: process_img1(image, lane_detector))
+    
+
+    spawn_point2 = carla.Transform(carla.Location(x=2.5 ,y = -2.5 ,z=0.7), carla.Rotation(yaw = -90))
+    sensor2 = world.spawn_actor(blueprint, spawn_point2, attach_to=vehicle)
+    actor_list.append(sensor2)
+    sensor2.listen(lambda image: process_img2(image, lane_detector))    
     '''
     #segcamera 
     blueprint = blueprint_library.find('sensor.camera.semantic_segmentation')
@@ -450,7 +529,7 @@ try:
        
     pygame.init()
     hud = HUD(100,480)
-    gameDisplay = pygame.display.set_mode((IM_WIDTH, IM_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)
+    gameDisplay = pygame.display.set_mode((image_w, image_h), pygame.HWSURFACE | pygame.DOUBLEBUF)
 # Draw black to the display
     gameDisplay.fill((0,0,0))
     clock = pygame.time.Clock()
@@ -469,7 +548,19 @@ try:
         hud.tick(world, clock)
         hud.render(gameDisplay)
         pygame.display.flip()
-        
+
+        if IMAGE != []:
+            fig = plt.figure()
+            f1 = fig.add_subplot(1,3,2)
+            f1.imshow(IMAGE)
+            f2 = fig.add_subplot(1,3,3)
+            f2.imshow(IMAGE1)
+            f3 = fig.add_subplot(1,3,1)
+            f3.imshow(IMAGE2)
+            plt.draw()
+            plt.pause(0.001)            
+            figure.clear()
+
         for event in pygame.event.get():
     # If the window is closed, break the while loop
             if event.type == pygame.QUIT:
@@ -492,6 +583,8 @@ finally:
     print('destroying actors')
     for actor in actor_list:
         actor.destroy()
-    camera.stop()
+    for camera in camera_list:
+        camera.stop()
+        camera.destroy()
     pygame.quit()        
     print('done.')

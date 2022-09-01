@@ -113,9 +113,11 @@ class UltrafastLaneDetector():
         self.lanes_points, self.lanes_detected = self.process_output(output, self.cfg)
 
 		# Draw depth image
-        visualization_img, point = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
+        # visualization_img, point = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
+        visualization_img,point = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
 
         return visualization_img, point
+        #return visualization_img
 
     def prepare_input(self, img):
 		# Transform the image for inference
@@ -175,6 +177,10 @@ class UltrafastLaneDetector():
         return np.array(lanes_points), np.array(lanes_detected)
     @staticmethod
 
+
+
+
+
     def draw_lanes(input_img, lanes_points, lanes_detected, cfg, draw_points=True):
 		# Write the detected line points in the image
         visualization_img = cv2.resize(input_img, (cfg.img_w, cfg.img_h), interpolation = cv2.INTER_AREA)
@@ -184,30 +190,47 @@ class UltrafastLaneDetector():
             lane_segment_img = visualization_img.copy()
             pts = [np.vstack((lanes_points[1],np.flipud(lanes_points[2])))]
             cv2.fillPoly(lane_segment_img,pts, color =(255,0,0)) 
-            if(len(lanes_points[1]) > len(lanes_points[2])):
-                x =len(lanes_points[2])
-            else :
-                x = len(lanes_points[1]) 
+            
                 
-            print("left : " ,lanes_points[1])
-            print("right : " ,lanes_points[2])
+        #print("left : " ,lanes_points[1])
+        #print("right : " ,lanes_points[2])
             
-            global new_point
-            new_point = []
-            for i in range(x):
-                new_point.append([int((lanes_points[1][i][0] + lanes_points[2][i][0])//2) , int((lanes_points[1][i][1] + lanes_points[2][i][1])//2)])
+            # global new_point
+        
+        
+        
+        '''
+        new_point = []
+        for i in range(x):
+            new_point.append([int((lanes_points[1][i][0] + lanes_points[2][i][0])//2) , int((lanes_points[1][i][1] + lanes_points[2][i][1])//2)])
           
-            for i in range(x):
-                cv2.circle(lane_segment_img, new_point[i],5, (0,255,0), -1)
-            
-            visualization_img = cv2.addWeighted(visualization_img, 0.7, lane_segment_img, 0.3, 0)
+        for i in range(x):
+            cv2.circle(lane_segment_img, new_point[i],5, (0,255,0), -1)
+        '''
+        
+        arr = np.array(lanes_points[1])
+        a = np.where((arr[:,1] <505) & (arr[:,1]>495))
+        if len(a) >1 :
+            a = a[0]
+        arr1 = np.array(lanes_points[2])
+        b = np.where((arr1[:,1] <505) & (arr1[:,1]>495))              
+        if len(b) >1 :
+            b = b[0]
+        
+        
+        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]        
+        cv2.circle(lane_segment_img, cp,5, (0,255,0), -1)
+       
+        visualization_img = cv2.addWeighted(visualization_img, 0.7, lane_segment_img, 0.3, 0)
+        
             
         if(draw_points):
             for lane_num,lane_points in enumerate(lanes_points):
                 for lane_point in lane_points:
                     cv2.circle(visualization_img, (lane_point[0],lane_point[1]), 3, lane_colors[lane_num], -1)
 
-        return visualization_img, new_point
+        return visualization_img,cp
+        #return visualization_img
 
 
 	

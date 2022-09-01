@@ -143,14 +143,14 @@ def process_img(image, lane_detector):
     frame = i2[:, :, :3]
     # output_img, points = lane_detector.detect_lanes(frame)
     output_img,point = lane_detector.detect_lanes(frame)
-    #print(point)
-    mid = len(point)//2
+    print(point)
+    mid = point
     print("time :", time.time() - start)
     vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
-    a = steerangle(point[mid], [640,720]) 
+    a = steerangle(mid, [640,720]) 
     print(a)
-    if a>30:
-        vehicle.apply_control(carla.VehicleControl(throttle= 0.5, steer= a/20))
+    if a>2:
+        vehicle.apply_control(carla.VehicleControl(throttle= 0.5, steer= a/10))
         
         
     v = vehicle.get_velocity()
@@ -453,6 +453,7 @@ try:
 
     actor_list.append(vehicle)
     
+    print(carla.VehicleWheelLocation)
     #pygame camera
     
     camera_init_trans = carla.Transform(carla.Location(x=-5, z =3),carla.Rotation(pitch=-20))
@@ -505,6 +506,8 @@ try:
     sensor2 = world.spawn_actor(blueprint, spawn_point2, attach_to=vehicle)
     actor_list.append(sensor2)
     sensor2.listen(lambda image: process_img2(image, lane_detector))    
+  
+    
     '''
     #segcamera 
     blueprint = blueprint_library.find('sensor.camera.semantic_segmentation')
@@ -550,6 +553,13 @@ try:
         pygame.display.flip()
 
         if IMAGE != []:
+            plt.subplot(1, 1, 1)
+            plt.imshow(IMAGE)
+            plt.draw()
+            plt.pause(0.001)
+            figure.clear()
+            
+            '''
             fig = plt.figure()
             f1 = fig.add_subplot(1,3,2)
             f1.imshow(IMAGE)
@@ -560,7 +570,7 @@ try:
             plt.draw()
             plt.pause(0.001)            
             figure.clear()
-
+            '''
         for event in pygame.event.get():
     # If the window is closed, break the while loop
             if event.type == pygame.QUIT:

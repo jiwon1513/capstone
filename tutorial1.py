@@ -123,18 +123,69 @@ def class_to_label(x):
         return model.names[int(x)]
 '''
 
-def steerangle(p1,p2):  
-    a = p1[0] - p2[0]    
-    b = p1[1] - p2[1]
-    length1 = math.sqrt((a*a) + (b*b))
-    #print("L :",length1)
-    #print("b = ", b)
-    angle = math.acos(b/length1)
-    if a>0 :
-        return angle
-    else :
-        return -angle
+
+
+
+
+
+def distance(p1,p2):
+    x = p1[0] - p2[0]
+    y = p1[1] - p2[1]
+    length = math.sqrt((x*x) + (y*y))
+    return length
+ 
+def findR(lane_points,img):
+   
+    a = lane_points[0] 
+    b = lane_points[-1]
+
+    x = b[0] - a[0] 
+    y = b[1] - a[1]
+    w = math.sqrt((x*x) + (y*y))
+   
+    m = -x/y
+    M = [(a[0]+b[0])//2 ,(a[1]+b[1])//2]
     
+    
+   
+    C = 1000
+    z = 0
+    for i in range (len(lane_points)):
+        if lane_points[i][0] - M[0] != 0:
+            c = abs(((lane_points[i][1] - M[1]) / (lane_points[i][0] - M[0])) - m)
+       
+            if c < C:
+            
+                C = c
+                z = i
+        else:
+            z= i
+            break
+    h = distance(M,lane_points[z])
+    try:
+        R = h/2 + (w*w)/(8*h)
+    except:
+        R = 1000000000
+    #실제 좌표의 차이로 나오는 차선의 폭과 실제 차선의 폭 3.5를 비례식을 이용해서 다시 구하기
+    RR = 3.5*R/600
+    #cv2.circle(img,lane_points[z],5, (0,255,255), -1)
+    return RR
+
+def steerangle(lane_points1, lane_points2,img):
+    R1 = findR(lane_points1,img)
+    R2 = findR(lane_points2,img)
+    #print("r1, r2" ,R1,R2)
+    L = 2.89
+    T = 1.64
+    R = (R1+R2)/2
+    thetain  = math.degrees(math.atan(L/(R-(T/2))))
+    thetaout = math.degrees(math.atan(L/(R+(T/2))))
+    return thetain, thetaout
+
+center =[[0,0],[620,509]]
+
+
+c = [660,660]    
 def process_img(image, lane_detector):
     start = time.time()
    
@@ -142,17 +193,50 @@ def process_img(image, lane_detector):
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
     frame = i2[:, :, :3]
     # output_img, points = lane_detector.detect_lanes(frame)
-    output_img,point = lane_detector.detect_lanes(frame)
-    print(point)
-    mid = point
-    print("time :", time.time() - start)
-    vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
-    a = steerangle(mid, [640,720]) 
-    print(a)
-    if a>2:
-        vehicle.apply_control(carla.VehicleControl(throttle= 0.5, steer= a/10))
+    output_img,l1,l2 = lane_detector.detect_lanes(frame)    
+    
+    try:
+        arr = np.array(l1)
+        a = np.where((arr[:,1] <510) & (arr[:,1]>485))
+
+        arr1 = np.array(l2)
+        b = np.where((arr1[:,1] <510) & (arr1[:,1]>485))          
+
+             
+    
+        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]
+        cv2.circle(output_img, cp,5, (0,255,0), -1)
+        c[0] = c[1]
+        c[1] = cp[0]
+        
+    except:
+       c[0] = c[1]      
         
         
+    
+    thetain, thetaout = steerangle(l1,l2,output_img)
+    angle = (thetain +thetaout)/140
+    
+    if left == True:
+        angle = -angle
+        
+        
+    elif right == True:
+        
+        angle = angle
+    else:
+        thetain, thetaout = steerangle(l1,l2,output_img)
+        angle = -(thetain +thetaout)/140
+    
+    
+    print(angle)
+
+    #vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))     
+    if abs(angle) > 0.3:       
+        vehicle.apply_control(carla.VehicleControl(throttle=0.5, steer= 0))
+        
+    else:
+        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
     v = vehicle.get_velocity()
     sp = 3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2)
     
@@ -164,7 +248,7 @@ def process_img(image, lane_detector):
     IMAGE = output_img
 
     
-    print("time :", time.time() - start)
+  
     #yolov5
     '''
     results = model(frame)
@@ -196,12 +280,30 @@ def process_img1(image, lane_detector):
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
     frame = i2[:, :, :3]
     # output_img, points = lane_detector.detect_lanes(frame)
-    output_img,point = lane_detector.detect_lanes(frame)
+    output_img,l1,l2 = lane_detector.detect_lanes(frame)
     #print(point)
-
     global IMAGE1
     
     IMAGE1 = output_img
+    try:
+        arr = np.array(l1)
+        a = np.where((arr[:,1] <510) & (arr[:,1]>485))
+
+        arr1 = np.array(l2)
+        b = np.where((arr1[:,1] <510) & (arr1[:,1]>485))          
+
+             
+    
+        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]
+        cv2.circle(output_img, cp,5, (0,255,0), -1)
+        global left
+        left = True
+        
+    except:
+        left = False
+   
+
+   
     
 def process_img2(image, lane_detector):
     
@@ -210,12 +312,30 @@ def process_img2(image, lane_detector):
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
     frame = i2[:, :, :3]
     # output_img, points = lane_detector.detect_lanes(frame)
-    output_img,point = lane_detector.detect_lanes(frame)
-    #print(point)
-
+    output_img,l1,l2 = lane_detector.detect_lanes(frame)
     global IMAGE2
     
-    IMAGE2 = output_img    
+    IMAGE2 = output_img 
+    #print(point)
+    try:
+        arr = np.array(l1)
+        a = np.where((arr[:,1] <510) & (arr[:,1]>485))
+
+        arr1 = np.array(l2)
+        b = np.where((arr1[:,1] <510) & (arr1[:,1]>485))          
+
+             
+    
+        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]
+        cv2.circle(output_img, cp,5, (0,255,0), -1)
+        global right
+        right = True
+        
+        
+    except:
+        right = False
+
+      
     
 def convertimage(image):
     image.convert(cc.CityScapesPalette)
@@ -456,7 +576,7 @@ try:
     print(carla.VehicleWheelLocation)
     #pygame camera
     
-    camera_init_trans = carla.Transform(carla.Location(x=-5, z =3),carla.Rotation(pitch=-20))
+    camera_init_trans = carla.Transform(carla.Location(x=-5,z =3),carla.Rotation(pitch=-20))
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera = world.spawn_actor(camera_bp,camera_init_trans, attach_to=vehicle)
     camera_list.append(camera)
@@ -469,6 +589,8 @@ try:
     global image_h
     image_w = camera_bp.get_attribute("image_size_x").as_int()
     image_h = camera_bp.get_attribute("image_size_y").as_int()
+    
+    
     
 
 # Instantiate objects for rendering and vehicle control
@@ -485,8 +607,19 @@ try:
     blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
     blueprint.set_attribute('fov', '110')
     blueprint.set_attribute('sensor_tick','0.3')'''
+  
+    spawn_point1 = carla.Transform(carla.Location(x=2.5 ,y = 2.5 ,z=0.7), carla.Rotation(yaw = 45))
+    sensor1 = world.spawn_actor(blueprint, spawn_point1, attach_to=vehicle)
+    actor_list.append(sensor1)
+    sensor1.listen(lambda image: process_img1(image, lane_detector))
     
-    spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
+
+    spawn_point2 = carla.Transform(carla.Location(x=2.5 ,y = -2.5 ,z=0.7), carla.Rotation(yaw = -45))
+    sensor2 = world.spawn_actor(blueprint, spawn_point2, attach_to=vehicle)
+    actor_list.append(sensor2)
+    sensor2.listen(lambda image: process_img2(image, lane_detector)) 
+   
+    spawn_point = carla.Transform(carla.Location(x=2.5,z=0.7))
     sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
     # add sensor to list of actors
     actor_list.append(sensor)
@@ -496,17 +629,9 @@ try:
     
     
     
-    spawn_point1 = carla.Transform(carla.Location(x=2.5 ,y = 2.5 ,z=0.7), carla.Rotation(yaw = 90))
-    sensor1 = world.spawn_actor(blueprint, spawn_point1, attach_to=vehicle)
-    actor_list.append(sensor1)
-    sensor1.listen(lambda image: process_img1(image, lane_detector))
-    
+   
+   
 
-    spawn_point2 = carla.Transform(carla.Location(x=2.5 ,y = -2.5 ,z=0.7), carla.Rotation(yaw = -90))
-    sensor2 = world.spawn_actor(blueprint, spawn_point2, attach_to=vehicle)
-    actor_list.append(sensor2)
-    sensor2.listen(lambda image: process_img2(image, lane_detector))    
-  
     
     '''
     #segcamera 
@@ -553,24 +678,21 @@ try:
         pygame.display.flip()
 
         if IMAGE != []:
-            plt.subplot(1, 1, 1)
+            
+            plt.subplot(1, 3, 2)
             plt.imshow(IMAGE)
+         
+            plt.subplot(1, 3, 3)
+            plt.imshow(IMAGE1)
+            plt.subplot(1, 3, 1)
+            plt.imshow(IMAGE2)
+         
             plt.draw()
             plt.pause(0.001)
+            
             figure.clear()
             
-            '''
-            fig = plt.figure()
-            f1 = fig.add_subplot(1,3,2)
-            f1.imshow(IMAGE)
-            f2 = fig.add_subplot(1,3,3)
-            f2.imshow(IMAGE1)
-            f3 = fig.add_subplot(1,3,1)
-            f3.imshow(IMAGE2)
-            plt.draw()
-            plt.pause(0.001)            
-            figure.clear()
-            '''
+   
         for event in pygame.event.get():
     # If the window is closed, break the while loop
             if event.type == pygame.QUIT:

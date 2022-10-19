@@ -114,9 +114,9 @@ class UltrafastLaneDetector():
 
 		# Draw depth image
         # visualization_img, point = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
-        visualization_img,point = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
+        visualization_img,lanes_detectedleft,lanes_detectedright  = self.draw_lanes(image, self.lanes_points, self.lanes_detected, self.cfg, draw_points)
 
-        return visualization_img, point
+        return visualization_img,lanes_detectedleft, lanes_detectedright
         #return visualization_img
 
     def prepare_input(self, img):
@@ -193,7 +193,7 @@ class UltrafastLaneDetector():
             
                 
         #print("left : " ,lanes_points[1])
-        #print("right : " ,lanes_points[2])
+       # print("right : " ,lanes_points[2])
             
             # global new_point
         
@@ -208,28 +208,30 @@ class UltrafastLaneDetector():
             cv2.circle(lane_segment_img, new_point[i],5, (0,255,0), -1)
         '''
         
+        '''
         arr = np.array(lanes_points[1])
-        a = np.where((arr[:,1] <505) & (arr[:,1]>495))
-        if len(a) >1 :
-            a = a[0]
+        a = np.where((arr[:,1] <510) & (arr[:,1]>485))
+
         arr1 = np.array(lanes_points[2])
-        b = np.where((arr1[:,1] <505) & (arr1[:,1]>495))              
-        if len(b) >1 :
-            b = b[0]
+        b = np.where((arr1[:,1] <510) & (arr1[:,1]>485))          
+
         
-        
-        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]        
+             
+       # print("a - b :",arr[a][0]- arr1[b][0])
+        cp = [(arr[a][0][0] + arr1[b][0][0])//2 , (arr[a][0][1] + arr1[b][0][1])//2]
+                
         cv2.circle(lane_segment_img, cp,5, (0,255,0), -1)
-       
+        print(cp)
+        '''
         visualization_img = cv2.addWeighted(visualization_img, 0.7, lane_segment_img, 0.3, 0)
-        
-            
+       
+          
         if(draw_points):
             for lane_num,lane_points in enumerate(lanes_points):
                 for lane_point in lane_points:
                     cv2.circle(visualization_img, (lane_point[0],lane_point[1]), 3, lane_colors[lane_num], -1)
 
-        return visualization_img,cp
+        return visualization_img,lanes_points[1],lanes_points[2]
         #return visualization_img
 
 

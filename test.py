@@ -1,5 +1,8 @@
 import os
 
+import numpy as np
+from matplotlib import pyplot as plt
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3 '
 
 # from predict import *
@@ -24,7 +27,11 @@ meanTime = 0.
 
 # birdeyeview ROI
 # t1, t2, b1, b2 = [100, 150], [156, 150], [0, 240], [256, 240]
-t1, t2, b1, b2 = [width-154, height-106], [width-102, height-106], [0, height-16], [width, height-16]
+t1, t2, b1, b2 = [width-154, height-106], [width-102, height-106], \
+                 [0, height-16], [width, height-16]   # polyfit
+
+t11, t22, b11, b22 = [width-134, height-126], [width-133 + 5, height-126], \
+                     [0, height-16], [23, height-16]   # polyfit
 
 # interpolate initial value
 x = [10, 60, 110]
@@ -33,16 +40,26 @@ y = [240, 195, 150]
 # f1 = interpolate.interp1d(x, y)
 # f1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 # f1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-f2l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-f2r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+f2l = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
+f2r = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
+
+testl = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
+testr = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
 
 # load_1l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
 # load_1r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-load_2l = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-load_2r = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+load_2l = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
+load_2r = interpolate.InterpolatedUnivariateSpline(x, y, k=1)
 plot_x = np.arange(height)
 # plt.plot(plot_x, f1(plot_x))
 # plt.show()
+lastPoint = 13
+# if False:
+
+# print(len(image_list[0]))
+# print(len(image_list[0][0]))
+# print(len(image_list[0][0][0]))
+# exit()
 
 for n in range(len(image_list)):
     start = time()
@@ -74,9 +91,12 @@ for n in range(len(image_list)):
 
     # line = line.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
     line_bev = line_bev.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
+    # test = line_bev
+    np.append(line_bev, [255, lastPoint])
 
     # f1l, f1r = make_interpolate(f1l, f1r, line)
     f2l, f2r = make_interpolate(f2l, f2r, line_bev)
+    # testl, testr = make_interpolate(testl, testr, test)
 
     # line_load = tf.where(tf.equal(B, 1)).numpy()    # segmenstation에 적용시
     line_load_bev = tf.where(tf.equal(image_bev, 1)).numpy()    # birdeyeview에 적용시
@@ -84,16 +104,26 @@ for n in range(len(image_list)):
     # load_1l, load_1r = make_interpolate(load_1l, load_1r, line_load)
     load_2l, load_2r = make_interpolate(load_2l, load_2r, line_load_bev)
 
+
+
     print(f'{n}th predict time: {time() - start}')
     if (time() - start) > maxTime:
         maxTime = time() - start
     meanTime += time() - start
 
-    plt.subplot(1, 3, 1)
+    plt.subplot(1,  3, 1)
     plt.imshow(image)
+    plt.xlabel("True image")
+    ax = plt.gca()
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
     plt.subplot(1, 3, 2)
     plt.imshow(pred[0])
+    plt.xlabel("Segmentation image")
     [plt.scatter(point[0], point[1]) for point in [t1, t2, b1, b2]]
+    ax = plt.gca()
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
 
     # plt.plot(list(filter(lambda x: (x < int(width/2)) & (x >= 0), f1l(plot_x))),
     #          list(filter(lambda x: (f1l(x) < int(width/2)) & (f1l(x) >= 0), plot_x)), '--', color='k')    # segmenstation에 적용시
@@ -104,14 +134,54 @@ for n in range(len(image_list)):
 
     plt.subplot(1, 3, 3)
     plt.imshow(birdeyeview)
-    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2l(plot_x))),
-             list(filter(lambda x: (f2l(x) < 256) & (f2l(x) >= 0), plot_x)), '--', color='k')    # birdeyeview에 적용시
-    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2r(plot_x))),
-             list(filter(lambda x: (f2r(x) < 256) & (f2r(x) >= 0), plot_x)), '--', color='b')
-    plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2l(plot_x))),
-             list(filter(lambda x: (load_2l(x) < 256) & (load_2l(x) >= 0), plot_x)), '--', color='w')
+    plt.xlabel("Bird eye view image")
+    ax = plt.gca()
+    ax.axes.xaxis.set_ticks([])
+    ax.axes.yaxis.set_ticks([])
+
+    if len(line_bev) == 0:
+        print("no lane")
+
+    plt.plot(list(filter(lambda x: (x < 128) & (x >= 0), f2l(plot_x))),
+             list(filter(lambda x: (f2l(x) < 128) & (f2l(x) >= 0), plot_x)), '--', color='k')  # birdeyeview에 적용시
+    # # plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), testl(plot_x))),
+    # #          list(filter(lambda x: (testl(x) < 256) & (testl(x) >= 0), plot_x)), '--', color='b')  # birdeyeview에 적용시
+    # plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), f2r(plot_x))),
+    #          list(filter(lambda x: (f2r(x) < 256) & (f2r(x) >= 0), plot_x)), '--', color='b')
+    plt.plot(list(filter(lambda x: (x < 128) & (x >= 0), load_2l(plot_x))),
+             list(filter(lambda x: (load_2l(x) < 128) & (load_2l(x) >= 0), plot_x)), '--', color='k')
     plt.plot(list(filter(lambda x: (x < 256) & (x >= 0), load_2r(plot_x))),
-             list(filter(lambda x: (load_2r(x) < 256) & (load_2r(x) >= 0), plot_x)), '--', color='w')
+             list(filter(lambda x: (load_2r(x) < 256) & (load_2r(x) >= 0), plot_x)), '--', color='k')
+
+    temp = []
+    # print(line_bev)
+    for data in line_bev:
+        if data[0] == 255:
+            temp.append(data[1])
+    if len(temp) > 0:
+       if temp[0] < 50:
+            lastPoint = temp[0]
+    plt.scatter(lastPoint, 255)
+    # print(lastPoint)
+
+    # birdeyeview_center = wrapping(pred_num[0], t11, t22, b11, b22)
+    # image_bev_center = tf.math.argmax(birdeyeview_center, 2)    # birdeyeview에 적용시
+    # image_bev_center = tf.keras.backend.eval(image_bev_center)    # birdeyeview에 적용시
+    # line_bev_center = tf.where(tf.equal(image_bev_center, 2))    # birdeyeview에 적용시
+    # line_bev_center = line_bev_center.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
+    # centerLine = np.zeros(height)
+    # # print(line_bev_center)
+    # for i in range(len(line_bev_center)):
+    #     index = line_bev_center[i][0]
+    #     centerLine[index] = 1
+    #
+    # plt.plot(np.arange(70, len(centerLine)), centerLine[70:])
+
+    # plt.subplot(2, 2, 4)
+    # plt.imshow(birdeyeview_center)
+    # plt.imshow(pred[0])
+    # [plt.scatter(point[0], point[1]) for point in [t11, t22, b11, b22]]
+
     plt.draw()
     plt.pause(0.01)
     figure.clear()

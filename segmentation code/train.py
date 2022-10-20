@@ -23,17 +23,17 @@ print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('
 # model.summary()
 classes = 3
 file_path = 'E:/dataset/'
-i = 2
+i = 0
 
 if i == 0:
-    height, width = 256, 256
+    height, width = 256*2, 256*2
     model, name = unet_model((height, width, 3), filters=32, n_classes=classes), 'UNet'
     train_image = np.load(file_path + f'train_images_{height}_{width}.npy')
     train_mask = np.load(file_path + f'train_masks_{height}_{width}.npy')
     val_image = np.load(file_path + f'val_images_{height}_{width}.npy')
     val_mask = np.load(file_path + f'val_masks_{height}_{width}.npy')
-    test_image = np.load(file_path + f'test_test_images_{height}_{width}.npy')
-    test_mask = np.load(file_path + f'test_test_masks_{height}_{width}.npy')
+    # test_image = np.load(file_path + f'test_test_images_{height}_{width}.npy')
+    # test_mask = np.load(file_path + f'test_test_masks_{height}_{width}.npy')
 elif i == 1:
     height, width = 192, 192
     model, name = pspnet(classes,  height, width, 3), 'PSPNet'
@@ -92,7 +92,7 @@ history = model.fit(train_image,
                     epochs=epochs,
                     # verbose=1,
                     callbacks=[callback, reduce_lr],
-                    batch_size=32,
+                    batch_size=10,
                     shuffle=True)
 
 acc = [0.] + history.history['accuracy']
@@ -126,16 +126,16 @@ model.save(file_path + 'carla-image-segmentation-' + name + '.h5')
 
 train_loss, train_accuracy = model.evaluate(train_image, train_mask, batch_size=32)
 validation_loss, validation_accuracy = model.evaluate(val_image, val_mask, batch_size=32)
-test_loss, test_accuracy = model.evaluate(test_image, test_mask, batch_size=32)
+# test_loss, test_accuracy = model.evaluate(test_image, test_mask, batch_size=32)
 
 f = open(file_path + name + ".txt", 'w')
 f.write(f'Model Accuracy on the Training Dataset: {round(train_accuracy * 100, 2)}%\n')
 f.write(f'Model Accuracy on the Validation Dataset: {round(validation_accuracy * 100, 2)}%\n')
-f.write(f'Model Accuracy on the Test Dataset: {round(test_accuracy * 100, 2)}%')
+# f.write(f'Model Accuracy on the Test Dataset: {round(test_accuracy * 100, 2)}%')
 f.close()
 
 print(f'Model Accuracy on the Training Dataset: {round(train_accuracy * 100, 2)}%')
 print(f'Model Accuracy on the Validation Dataset: {round(validation_accuracy * 100, 2)}%')
-print(f'Model Accuracy on the Test Dataset: {round(test_accuracy * 100, 2)}%')
+# print(f'Model Accuracy on the Test Dataset: {round(test_accuracy * 100, 2)}%')
 
 # del model, history, train_image, train_mask, val_image, val_mask, test_image, test_mask

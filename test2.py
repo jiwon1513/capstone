@@ -2,18 +2,49 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3 '
 
-from predict import *
+# from predict import *
 from time import time
 import cv2
+import tensorflow as tf
+import numpy as np
 from scipy import interpolate
+from tensorflow.python.keras.models import load_model
 
 # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 #
 main_path = 'E:/dataset/'
 image_path = main_path + "test/RGB/"
+file_path = 'E:/dataset/'
 
 # num = 0
 # model, height, width, name = loadModel(num)
+
+
+def loadModel(num):
+    i = num
+    if i == 0:
+        height, width = 256, 256
+        name = "UNet"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+    elif i == 1:
+        height, width = 192, 192
+        name = "PSPNet"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+    elif i == 2:
+        height, width = 224, 224
+        name = "ResNet"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+    elif i == 3:
+        height, width = 224, 224
+        name = "ResNet2"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+    elif i == 4:
+        height, width = 192, 192
+        name = "ResNet_PSPNet"
+        model = load_model(file_path + 'models/carla-image-segmentation-' + name + '.h5')
+
+    print('load images')
+    return model, height, width, name
 
 
 def predict(model, height, width, image_list):
@@ -54,7 +85,7 @@ def writePredict(eval, filename):
 
 def make_interpolate(f1, f2, line):
     # line = line.numpy()  # x값 기준 중복값 처리 및 보간법 적용을 위한 전처리
-    mid_point = 128
+    # mid_point = 128
     old = 0     # x 값 0부터 시작
     left = []    # x 값 중 첫번째 값만 배열 저장
     right = []
@@ -71,25 +102,30 @@ def make_interpolate(f1, f2, line):
             if len(right_temp) > 0:
                 right.append(right_temp[-1])
             right_temp = []
-    left = np.transpose(left)
-    right = np.transpose(right)
     # print(left)
     # print(right)
 
+    left = list(filter(lambda x: x[1] < 128, left))
+    left = np.transpose(left)
     if len(left) >= 2:
         x_left = left[0]
         y_left = left[1]
+        # print(x_left)
+        # print(y_left)
         if len(x_left) > 2:
             # f1 = np.polyfit([x_left[0], x_left[-1]], [y_left[0], y_left[-1]], 3)
-            f1 = np.polyfit(x_left, y_left, 3)
+            f1 = np.polyfit(x_left, y_left, 1)
             f1 = np.poly1d(f1)
             # f1 = interpolate.InterpolatedUnivariateSpline([x_left[0], x_left[-1]], [y_left[0], y_left[-1]], k=1)
+
+    right = list(filter(lambda x: x[1] > 128, right))
+    right = np.transpose(right)
     if len(right) >= 2:
         x_right = right[0]
         y_right = right[1]
         if len(x_right) > 2:
             # f2 = np.polyfit([x_right[0], x_right[-1]], [y_right[0], y_right[-1]], 3)
-            f2 = np.polyfit(x_right, y_right, 3)
+            f2 = np.polyfit(x_right, y_right, 1)
             f2 = np.poly1d(f2)
             # f2 = interpolate.InterpolatedUnivariateSpline([x_right[0], x_right[-1]], [y_right[0], y_right[-1]], k=1)
 

@@ -14,8 +14,10 @@ import tensorflow as tf
 # mask_path = file_path + 'town5/seg/'
 
 main_path = 'E:/dataset/'
-image_path = [main_path + "town" + i + "/RGB/" for i in ['0', '5', '6', '7', '10']]
-mask_path = [main_path + "town" + i + "/seg/" for i in ['0', '5', '6', '7', '10']]
+# image_path = [main_path + "town" + i + "/RGB/" for i in ['0', '5', '6', '7', '10']]
+# mask_path = [main_path + "town" + i + "/seg/" for i in ['0', '5', '6', '7', '10']]
+image_path = [main_path + "town" + i + "/RGB/" for i in ['0', '5', '6']]
+mask_path = [main_path + "town" + i + "/seg/" for i in ['0', '5', '6']]
 # image_path = main_path + "test/RGB/"
 # mask_path = main_path + "test/seg/"
 image_list = []
@@ -40,7 +42,7 @@ print("Complete sorting input lists!")
 train_images_list, val_images_list, train_masks_list, val_masks_list = train_test_split(image_list, mask_list, test_size=0.2, shuffle=True, random_state=10)
 test_images_list, val_images_list, test_masks_list, val_masks_list = train_test_split(val_images_list, val_masks_list, test_size=0.5, shuffle=True, random_state=10)
 
-height, width = 192, 192
+height, width = 512, 512
 resize = (height, width)
 train_images = np.zeros((len(train_images_list), height, width, 3), dtype=np.uint8)
 train_masks = np.zeros((len(train_images_list), height, width, 1), dtype=np.uint8)
